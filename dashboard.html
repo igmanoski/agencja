@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aftermarket — Panel Sponsora</title>
+  <meta name="description" content="Zabezpieczony panel statystyk dla partnerów biznesowych Aftermarket.">
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='24' font-size='24'>A</text></svg>">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    if (localStorage.getItem('site_auth') !== 'rumcajs') {
+      document.documentElement.classList.add('gate-locked');
+    }
+  </script>
+</head>
+<body>
+
+<!-- ████████ PASSWORD GATE ████████ -->
+<div id="password-gate" style="position:fixed;inset:0;background:#08080F;z-index:999999;display:flex;align-items:center;justify-content:center;padding:16px;">
+  <div class="orb orb-pk" style="top:20%;left:50%;width:600px;height:500px;transform:translateX(-50%);opacity:.22;filter:blur(110px);"></div>
+  <div class="card" style="max-width:400px;width:100%;text-align:center;position:relative;z-index:2;">
+    <div class="ti">
+      <div class="chip" style="margin:0 auto 20px;display:table;">🔒 SECURE ACCESS GATE</div>
+      <h2 style="font-size:1.8rem;text-transform:uppercase;margin-bottom:12px;letter-spacing:-0.03em;">AFTERMARKET</h2>
+      <p style="font-size:0.9rem;margin-bottom:24px;color:var(--t2);">Portal jest zabezpieczony. Wpisz hasło dostępu, aby odblokować podgląd.</p>
+      
+      <form id="gate-form">
+        <div class="fg" style="margin-bottom:14px;">
+          <input type="password" id="gate-pass" class="fi" placeholder="Wpisz hasło" required style="text-align:center;font-size:1rem;letter-spacing:0.15em;">
+        </div>
+        <div class="err" id="gate-err" style="display:none;margin-bottom:14px;">❌ Niepoprawne hasło. Spróbuj ponownie.</div>
+        <button type="submit" class="btn btn-p btn-block btn-lg" style="margin-top:6px;">Odblokuj portal →</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function() {
+    const gate = document.getElementById('password-gate');
+    const form = document.getElementById('gate-form');
+    const passInput = document.getElementById('gate-pass');
+    const errMsg = document.getElementById('gate-err');
+    
+    if (localStorage.getItem('site_auth') === 'rumcajs') {
+      if (gate) gate.remove();
+      document.documentElement.classList.remove('gate-locked');
+    }
+    
+    if (form) {
+      form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        if (passInput.value.trim() === 'rumcajs') {
+          localStorage.setItem('site_auth', 'rumcajs');
+          document.documentElement.classList.remove('gate-locked');
+          if (gate) {
+            gate.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+            gate.style.opacity = '0';
+            gate.style.transform = 'scale(1.05)';
+            setTimeout(() => gate.remove(), 400);
+          }
+        } else {
+          if (errMsg) errMsg.style.display = 'block';
+          passInput.value = '';
+          passInput.focus();
+        }
+      });
+    }
+  })();
+</script>
+
+<!-- ░░░░ HEADER ░░░░ -->
+<header>
+  <div class="wrap nav-inner">
+    <a href="index.html" class="logo">Aftermarket<span class="logo-dot">.</span></a>
+    <nav class="nav-group">
+      <a href="index.html#giveaway">Konkurs</a>
+      <a href="index.html#sponsors">Sponsorzy</a>
+      <a href="dashboard.html" class="on">Dashboard</a>
+    </nav>
+    <a href="index.html#sponsors" class="btn btn-g btn-sm mob-hide">Dołącz jako Sponsor</a>
+  </div>
+</header>
+
+
+<!-- ████████ LOGIN GATE ████████ -->
+<main id="view-login" class="pv" style="padding-top:80px;">
+  <div class="scene">
+    <div class="orb orb-pk" style="top:-100px;left:50%;width:800px;height:600px;transform:translateX(-50%);opacity:.26;"></div>
+  </div>
+
+  <section class="wrap" style="position:relative;z-index:1;max-width:520px;">
+    <div class="card login-card tilt rev">
+      <div class="ti">
+        <div style="text-align:center;margin-bottom:28px;">
+          <div class="chip" style="display:table;margin:0 auto 20px;">🔒 SECURE PARTNER PORTAL</div>
+          <h2 style="font-size:1.9rem;text-transform:uppercase;margin-bottom:10px;">Panel Partnera</h2>
+          <p>Zaloguj się, aby śledzić przyrosty i pobierać leady w czasie rzeczywistym.</p>
+        </div>
+
+        <div class="demo-hint">
+          <span style="font-size:1.1rem;">🔑</span>
+          <span>Tryb demonstracyjny — kod dostępu: <strong>AFTERMARKET-2026</strong></span>
+        </div>
+
+        <form id="login-form">
+          <div class="fg"><label class="fl" for="l-email">Adres e-mail firmy</label><input type="email" id="l-email" class="fi" placeholder="np. kontakt@marka.pl" required></div>
+          <div class="fg"><label class="fl" for="l-token">Kod dostępu (Token)</label><input type="text" id="l-token" class="fi" placeholder="AFTERMARKET-2026" required autocomplete="off"></div>
+          <div class="err" id="login-err">❌ Niepoprawny e-mail lub kod dostępu.</div>
+          <button type="submit" class="btn btn-p btn-block btn-lg" style="margin-top:4px;">Zaloguj się do Panelu →</button>
+        </form>
+
+        <div style="margin-top:24px;text-align:center;font-size:.8rem;color:var(--t3);">
+          Nie masz konta? <a href="index.html#sponsors" style="color:var(--t1);font-weight:700;">Zarezerwuj slot reklamowy</a>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+
+<!-- ████████ DASHBOARD PANEL ████████ -->
+<main id="view-dash" class="pv" style="padding-bottom:80px;">
+  <div class="scene">
+    <div class="orb orb-bl" style="top:-80px;left:5%;width:650px;height:440px;opacity:.18;"></div>
+    <div class="orb orb-pk" style="bottom:-60px;right:5%;width:750px;height:500px;opacity:.2;"></div>
+  </div>
+
+  <section class="wrap sec" style="position:relative;z-index:1;">
+
+    <!-- Dashboard header -->
+    <div class="dash-hdr rev">
+      <div>
+        <div class="chip"><span class="chip-dot"></span>PARTNER ANALYTICS HUB</div>
+        <h1 style="font-size:clamp(1.8rem,4vw,2.6rem);text-transform:uppercase;margin:10px 0 8px;">Panel Statystyk Sponsora</h1>
+        <p>Podgląd wzrostu profilu <strong id="dash-ig" style="color:var(--pink);">@twoja_marka</strong> w czasie rzeczywistym.</p>
+      </div>
+      <div class="dash-actions">
+        <button id="btn-refresh" class="btn btn-g btn-sm">⟳ Odśwież</button>
+        <button id="btn-logout"  class="btn btn-d">Wyloguj</button>
+      </div>
+    </div>
+
+    <!-- KPI Row — 3 unique cards -->
+    <div class="kpi-row">
+
+      <!-- KPI 1: Velocity + sparkline -->
+      <div class="card kpi-pk tilt rev">
+        <div class="ti">
+          <div class="kpi-l">Tempo przyrostu obserwujących</div>
+          <div class="kpi-v">+<span id="kpi-velocity">2 450</span><span style="font-size:.9rem;font-weight:600;color:var(--t3);font-family:var(--fb);"> / godz</span></div>
+          <div class="kpi-t">▲ 18.4% od startu giveaway</div>
+          <!-- Mini sparkline SVG -->
+          <div class="kpi-spark">
+            <svg viewBox="0 0 120 36" preserveAspectRatio="none" style="width:100%;height:100%">
+              <defs>
+                <linearGradient id="sg1" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#F43F5E" stop-opacity="0.4"/>
+                  <stop offset="100%" stop-color="#F43F5E" stop-opacity="0"/>
+                </linearGradient>
+              </defs>
+              <path d="M0 30 C15 28,30 26,45 20 C60 14,75 10,90 6 C105 2,115 1,120 0 L120 36 L0 36Z" fill="url(#sg1)"/>
+              <path d="M0 30 C15 28,30 26,45 20 C60 14,75 10,90 6 C105 2,115 1,120 0" fill="none" stroke="#F43F5E" stroke-width="2"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- KPI 2: Leads + mini progress indicator -->
+      <div class="card kpi-bl tilt rev d1">
+        <div class="ti">
+          <div class="kpi-l">Leady wygenerowane</div>
+          <div class="kpi-v" id="kpi-leads">12 840</div>
+          <div class="kpi-t">▲ +1 420 dzisiaj</div>
+          <!-- Mini progress bar -->
+          <div class="kpi-spark" style="display:flex;align-items:flex-end;gap:3px;padding-top:6px;">
+            <div style="background:rgba(59,130,246,.2);height:18px;width:14%;border-radius:3px;"></div>
+            <div style="background:rgba(59,130,246,.3);height:24px;width:14%;border-radius:3px;"></div>
+            <div style="background:rgba(59,130,246,.4);height:20px;width:14%;border-radius:3px;"></div>
+            <div style="background:rgba(59,130,246,.55);height:28px;width:14%;border-radius:3px;"></div>
+            <div style="background:rgba(59,130,246,.7);height:32px;width:14%;border-radius:3px;"></div>
+            <div style="background:#3B82F6;height:36px;width:14%;border-radius:3px;box-shadow:0 0 10px rgba(59,130,246,.5);"></div>
+            <div style="background:#3B82F6;height:30px;width:14%;border-radius:3px;opacity:.7;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- KPI 3: Status + live badge + campaign countdown -->
+      <div class="card kpi-gr tilt rev d2">
+        <div class="ti">
+          <div class="kpi-l">Status kampanii</div>
+          <div class="kpi-v" style="color:var(--pink);">LIVE DRAWING</div>
+          <div class="kpi-t neutral" id="kpi-timer">⏰ Ładowanie…</div>
+          <div style="margin-top:12px;">
+            <div class="live-badge"><div class="pulse-dot" style="width:7px;height:7px;"></div>Kampania aktywna</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chart + Activity Feed -->
+    <div class="dash-main rev d1">
+
+      <!-- Chart -->
+      <div class="card chart-card tilt">
+        <div class="ti">
+          <div class="chart-hdr">
+            <div>
+              <h3 style="font-size:1.15rem;text-transform:uppercase;margin-bottom:6px;">Trajektoria wzrostu konta — Live</h3>
+              <p style="font-size:.84rem;">Aftermarket Giveaway vs. prognoza organiczna</p>
+            </div>
+            <div class="chart-cur">STAN: <span id="dash-latest" style="color:var(--pink);">34 250</span></div>
+          </div>
+          <div class="chart-box"><canvas id="growthChart"></canvas></div>
+        </div>
+      </div>
+
+      <!-- Activity Feed -->
+      <div class="card" style="display:flex;flex-direction:column;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+          <h3 style="font-size:1.05rem;text-transform:uppercase;">Aktywność Live</h3>
+          <div class="live-badge" style="font-size:.62rem;"><div class="pulse-dot" style="width:6px;height:6px;"></div>Na żywo</div>
+        </div>
+        <div class="act-feed" id="act-feed">
+          <!-- populated by JS -->
+        </div>
+      </div>
+
+    </div>
+  </section>
+</main>
+
+
+<!-- ░░░░ FOOTER ░░░░ -->
+<footer>
+  <div class="wrap">
+    <div class="foot-btm">
+      <div class="logo">Aftermarket<span class="logo-dot">.</span></div>
+      <div class="foot-links" style="flex-direction:row;gap:28px;">
+        <a href="index.html#sponsors">Dla Sponsorów</a>
+        <a href="index.html#giveaway">Dla Uczestników</a>
+        <a href="dashboard.html">Panel Sponsora</a>
+      </div>
+      <div class="foot-copy">&copy; 2026 Aftermarket. Wszelkie prawa zastrzeżone.</div>
+    </div>
+  </div>
+</footer>
+
+<script type="module" src="dashboard.js"></script>
+</body>
+</html>
