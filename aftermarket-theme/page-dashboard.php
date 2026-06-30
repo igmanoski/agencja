@@ -107,7 +107,6 @@ get_header();
         <p>Podgląd wzrostu profilu <strong id="dash-ig" style="color:var(--pink);"><?php echo esc_html($ig_username); ?></strong> w czasie rzeczywistym.</p>
       </div>
       <div class="dash-actions">
-        <button id="btn-refresh" class="btn btn-g btn-sm">⟳ Odśwież</button>
         <a href="<?php echo esc_url(home_url('/?am_logout=1')); ?>" id="btn-logout" class="btn btn-d">Wyloguj</a>
       </div>
     </div>
@@ -135,10 +134,10 @@ get_header();
         </div>
       </div>
 
-      <!-- KPI 2: Leady -->
+      <!-- KPI 2: Przyrost -->
       <div class="card kpi-bl tilt rev d1">
         <div class="ti">
-          <div class="kpi-l">Leady wygenerowane</div>
+          <div class="kpi-l">Przyrost obserwujących</div>
           <div class="kpi-v" id="kpi-leads">—</div>
           <div class="kpi-t" id="kpi-leads-info">▲ Ładowanie…</div>
           <div class="kpi-spark" style="display:flex;align-items:flex-end;gap:3px;padding-top:6px;">

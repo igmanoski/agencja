@@ -1,6 +1,6 @@
 /* dashboard.js — Auth | REST API | Chart.js | CountUp | Timer | Feed */
 
-document.addEventListener('DOMContentLoaded', () => {
+function initDashboard() {
 
   // Guard: uruchamiaj tylko na stronie dashboardu
   if (!document.getElementById('view-login') && !document.getElementById('view-dash')) return;
@@ -122,6 +122,13 @@ document.addEventListener('DOMContentLoaded', () => {
   if (viewDash?.classList.contains('show')) {
     setTimeout(revealAll, 80);
     setTimeout(initTilt,  80);
+
+    // Zegar startuje NATYCHMIAST z daty wpisanej w panelu WP — bez oczekiwania na AJAX
+    const preloadTs = parseInt(AftermarketConfig?.campaignEndTs || '0', 10);
+    if (preloadTs > Date.now()) {
+      startCampaignTimer(preloadTs);
+    }
+
     loadDashboardData();
   } else {
     // Strona logowania — animacje
@@ -132,11 +139,19 @@ document.addEventListener('DOMContentLoaded', () => {
   /* ─────────────────────────────────────────────
      7. POBIERZ DANE Z REST API
   ───────────────────────────────────────────── */
-  async function loadDashboardData() {
+  async function loadDashboardData(force = false) {
     try {
-      const res = await fetch('/wp-json/aftermarket/v1/my-stats', {
+      const body = new URLSearchParams({
+        action: 'aftermarket_get_stats',
+        nonce:  AftermarketConfig?.statsNonce || '',
+      });
+      if (force) body.set('force', '1');
+
+      const res = await fetch(AftermarketConfig?.ajaxUrl || '/wp-admin/admin-ajax.php', {
+        method:      'POST',
         credentials: 'same-origin',
-        headers:     { 'Accept': 'application/json' },
+        headers:     { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body:        body.toString(),
       });
 
       if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -151,17 +166,10 @@ document.addEventListener('DOMContentLoaded', () => {
       populateDashboard(data);
 
     } catch (err) {
-      console.error('[Aftermarket] Błąd REST API:', err);
-      // Wyświetl awaryjne dane
-      populateDashboard({
-        ig_username:       document.getElementById('view-dash')?.dataset.ig || '@twoja_marka',
-        current_followers: 0,
-        followers_start:   0,
-        leads_generated:   0,
-        campaign_end_date: new Date(Date.now() + 7 * 86400 * 1000).toISOString(),
-        followers_history: [],
-        activity_feed:     [],
-      });
+      console.error('[Aftermarket] Błąd AJAX:', err);
+      // Awaryjnie pokaż co najmniej zegar z daty WP (już uruchomiony wyżej)
+      const dashIG = document.getElementById('dash-ig');
+      if (dashIG && dashIG.textContent === '') dashIG.textContent = '@twoja_marka';
     }
   }
 
@@ -169,6 +177,35 @@ document.addEventListener('DOMContentLoaded', () => {
      8. WYPEŁNIJ DASHBOARD DANYMI
   ───────────────────────────────────────────── */
   function populateDashboard(data) {
+    // Alert błędu Instagrama (typos, private profiles, API blocks)
+    let alertEl = document.getElementById('am-ig-alert');
+    if (data.ig_error) {
+      if (!alertEl) {
+        alertEl = document.createElement('div');
+        alertEl.id = 'am-ig-alert';
+        alertEl.style.background = 'rgba(244,63,94,0.08)';
+        alertEl.style.border = '1px solid rgba(244,63,94,0.22)';
+        alertEl.style.color = '#FCA5A5';
+        alertEl.style.padding = '14px 18px';
+        alertEl.style.borderRadius = '11px';
+        alertEl.style.fontSize = '0.84rem';
+        alertEl.style.fontWeight = '700';
+        alertEl.style.display = 'flex';
+        alertEl.style.alignItems = 'center';
+        alertEl.style.gap = '8px';
+        alertEl.style.marginBottom = '28px';
+        
+        const parent = document.querySelector('#view-dash .wrap');
+        if (parent) {
+          parent.insertBefore(alertEl, parent.firstChild);
+        }
+      }
+      alertEl.innerHTML = `⚠️ <span>${data.ig_error}</span>`;
+      alertEl.style.display = 'flex';
+    } else if (alertEl) {
+      alertEl.style.display = 'none';
+    }
+
     // IG handle
     const dashIG = document.getElementById('dash-ig');
     if (dashIG && data.ig_username) dashIG.textContent = data.ig_username;
@@ -176,26 +213,35 @@ document.addEventListener('DOMContentLoaded', () => {
     // Obserwujący
     const dashLatest = document.getElementById('dash-latest');
     const dashChart  = document.getElementById('dash-followers-chart');
-    if (data.current_followers) {
+    if (data.current_followers !== undefined && data.current_followers !== null) {
       if (dashLatest) countUp(dashLatest, data.current_followers, 1200);
       if (dashChart)  countUp(dashChart,  data.current_followers, 1200);
+    } else {
+      if (dashLatest) dashLatest.textContent = '0';
+      if (dashChart)  dashChart.textContent = '0';
     }
 
-    // Wzrost
+    // Zamiast powielać przyrost, pokazujemy datę ostatniej synchronizacji
     const growthInfo = document.getElementById('kpi-growth-info');
-    if (growthInfo && data.current_followers && data.followers_start) {
-      const gained = data.current_followers - data.followers_start;
-      growthInfo.textContent = '▲ +' + gained.toLocaleString('pl-PL') + ' od startu kampanii';
+    if (growthInfo && data.last_update) {
+      growthInfo.textContent = 'Ostatnia aktualizacja: ' + data.last_update;
     }
 
-    // Leady
+    // Przyrost (w miejsce leadów)
     const kpiLeads = document.getElementById('kpi-leads');
-    if (kpiLeads && data.leads_generated) countUp(kpiLeads, data.leads_generated, 900);
+    const gained = (data.current_followers !== undefined && data.followers_start !== undefined) 
+      ? Math.max(0, data.current_followers - data.followers_start) 
+      : 0;
+
+    if (kpiLeads) {
+      countUp(kpiLeads, gained, 900);
+    }
 
     const leadsInfo = document.getElementById('kpi-leads-info');
-    if (leadsInfo && data.leads_generated) {
-      const today = Math.floor(data.leads_generated * 0.11);
-      leadsInfo.textContent = '▲ +' + today.toLocaleString('pl-PL') + ' dzisiaj';
+    if (leadsInfo && data.followers_start !== undefined && data.followers_start !== null) {
+      leadsInfo.textContent = 'Start z poziomu: ' + data.followers_start.toLocaleString('pl-PL') + ' obserwujących';
+    } else if (leadsInfo) {
+      leadsInfo.textContent = 'Brak danych startowych';
     }
 
     // Subtitle wykresu
@@ -209,8 +255,8 @@ document.addEventListener('DOMContentLoaded', () => {
       initChart(data.followers_history, data.current_followers, data.followers_start);
     }, 200);
 
-    if (data.campaign_end_date) {
-      startCampaignTimer(new Date(data.campaign_end_date).getTime());
+    if (data.campaign_end_ts || data.campaign_end_date) {
+      startCampaignTimer(data.campaign_end_ts || new Date(data.campaign_end_date).getTime());
     }
 
     startActivityFeed(data.activity_feed);
@@ -237,27 +283,19 @@ document.addEventListener('DOMContentLoaded', () => {
     gBlue.addColorStop(0, 'rgba(59,130,246,0.2)');
     gBlue.addColorStop(1, 'rgba(59,130,246,0.00)');
 
-    // Dane z REST API
+    // Dane rzeczywistego przyrostu
     let labels  = [];
     let giveaway = [];
-    let organic  = [];
 
     if (history && history.length > 0) {
       history.forEach(point => {
         labels.push(point.label || point.date);
         giveaway.push(point.count);
       });
-      // Prognoza organiczna (bez kampanii — liniowy wzrost ~1%)
-      const startVal = followersStart || history[0]?.count || 0;
-      const steps = history.length;
-      for (let i = 0; i < steps; i++) {
-        organic.push(Math.round(startVal * Math.pow(1.001, i)));
-      }
     } else {
       // Fallback — brak danych
       labels  = ['Brak danych'];
       giveaway = [currentFollowers || 0];
-      organic  = [currentFollowers || 0];
     }
 
     growthChart = new Chart(ctx, {
@@ -266,35 +304,23 @@ document.addEventListener('DOMContentLoaded', () => {
         labels,
         datasets: [
           {
-            label: 'Wzrost z Aftermarket',
+            label: 'Liczba obserwujących',
             data: giveaway,
             borderColor: pink,
-            borderWidth: 3,
+            borderWidth: 4,
             backgroundColor: gPink,
-            fill: true,
-            tension: 0.48,
-            pointBackgroundColor: '#0F0F1A',
-            pointBorderColor: pink,
-            pointBorderWidth: 2.5,
-            pointRadius: 5,
-            pointHoverRadius: 8,
-            pointHoverBackgroundColor: pink,
-          },
-          {
-            label: 'Prognoza organiczna',
-            data: organic,
-            borderColor: blue,
-            borderWidth: 2,
-            borderDash: [6, 4],
-            backgroundColor: gBlue,
             fill: true,
             tension: 0.4,
             pointBackgroundColor: '#0F0F1A',
-            pointBorderColor: blue,
-            pointBorderWidth: 2,
-            pointRadius: 3,
-            pointHoverRadius: 6,
-          },
+            pointBorderColor: pink,
+            pointBorderWidth: 3,
+            pointRadius: 6,
+            pointHoverRadius: 9,
+            pointHoverBackgroundColor: pink,
+            pointHoverBorderWidth: 3,
+            shadowColor: 'rgba(244,63,94,0.5)',
+            shadowBlur: 10
+          }
         ],
       },
       options: {
@@ -303,31 +329,31 @@ document.addEventListener('DOMContentLoaded', () => {
         interaction: { mode: 'index', intersect: false },
         plugins: {
           legend: {
-            position: 'top',
-            labels: { color: '#666680', font: { family: 'Inter', size: 11, weight: '700' }, boxWidth: 14, boxHeight: 2, padding: 24 },
+            display: false // Ukrywamy legendę bo jest tylko jedna linia
           },
           tooltip: {
             backgroundColor: '#0E0E1A',
             borderColor: 'rgba(255,255,255,0.08)',
             borderWidth: 1,
             titleColor: '#fff',
-            bodyColor: '#888899',
+            bodyColor: '#fff',
+            bodyFont: { weight: 'bold' },
             padding: 14,
             cornerRadius: 14,
             callbacks: {
-              label: ctx => ' ' + ctx.dataset.label + ': ' + ctx.raw.toLocaleString('pl-PL'),
+              label: ctx => ' Obserwujący: ' + ctx.raw.toLocaleString('pl-PL'),
             },
           },
         },
         scales: {
           x: {
-            grid:   { color: 'rgba(255,255,255,0.025)' },
-            ticks:  { color: '#3E3E52', font: { family: 'Inter', size: 10 }, padding: 15 },
+            grid:   { display: false }, // Brak pionowych linii siatki
+            ticks:  { color: '#888899', font: { family: 'Inter', size: 11 }, padding: 12 },
             border: { display: false },
           },
           y: {
-            grid:   { color: 'rgba(255,255,255,0.025)' },
-            ticks:  { color: '#3E3E52', font: { family: 'Inter', size: 10 }, padding: 10, callback: v => v.toLocaleString('pl-PL') },
+            grid:   { color: 'rgba(255,255,255,0.03)', drawTicks: false }, // Bardzo subtelna pozioma siatka
+            ticks:  { color: '#888899', font: { family: 'Inter', size: 11 }, padding: 12, callback: v => v.toLocaleString('pl-PL') },
             border: { display: false },
           },
         },
@@ -390,44 +416,32 @@ document.addEventListener('DOMContentLoaded', () => {
   function startActivityFeed(activities) {
     const feed = document.getElementById('act-feed');
     if (!feed) return;
-    if (actInterval) clearInterval(actInterval);
+    // Zatrzymaj poprzedni interwał jeśli istnieje
+    if (actInterval) { clearInterval(actInterval); actInterval = null; }
 
-    const defaultActs = [
-      { type: 'g', text: 'Nowy obserwujący',      sub: 'Organiczny wzrost z kampanii' },
-      { type: 'p', text: 'Rejestracja uczestnika', sub: 'Formularz lead' },
-      { type: 'g', text: '+12 obserwujących',      sub: 'Burst z Instagram Reels' },
-      { type: 'b', text: 'Webhook płatności',      sub: 'Kampania aktywna — 200 OK' },
-      { type: 'g', text: 'Nowy obserwujący',       sub: 'Polecenie przez znajomych' },
-      { type: 'p', text: 'Story view',             sub: '+840 wyświetleń w 5 min' },
-    ];
+    // Wyczyszczenie feedu
+    feed.innerHTML = '';
 
-    const list = (activities && activities.length > 0) ? [...activities, ...defaultActs] : defaultActs;
-    let idx = 0;
+    // Wyświetl TYLKO zdarzenia z bazy — bez cycling, bez interwału
+    const list = (activities && activities.length > 0) ? activities : [];
 
-    // Załaduj 5 początkowych
-    for (let i = 0; i < Math.min(5, list.length); i++) {
-      const act = list[idx++ % list.length];
+    if (list.length === 0) {
+      feed.innerHTML = '<div class="act-item" style="color:rgba(255,255,255,0.35);font-size:.82rem;padding:12px 0;">Brak aktywności do wyświetlenia.</div>';
+      return;
+    }
+
+    list.forEach(act => {
       const div = document.createElement('div');
       div.className = 'act-item';
       div.innerHTML = `
-        <div class="act-dot ${act.type || 'g'}"></div>
+        <div class="act-dot ${act.type || act.t || 'g'}"></div>
         <div>
-          <div class="act-text"><strong>${act.text || ''}</strong></div>
+          <div class="act-text"><strong>${act.text || act.tx || ''}</strong></div>
           <div class="act-text">${act.sub || ''}</div>
           <div class="act-time">${timeStr()}</div>
         </div>`;
       feed.appendChild(div);
-    }
-
-    // Aktualizacje co 4-7 sekund
-    function scheduleNext() {
-      const delay = Math.random() * 3000 + 4000;
-      actInterval = setTimeout(() => {
-        addActivity(feed, list[idx++ % list.length]);
-        scheduleNext();
-      }, delay);
-    }
-    scheduleNext();
+    });
   }
 
   /* ─────────────────────────────────────────────
@@ -439,7 +453,7 @@ document.addEventListener('DOMContentLoaded', () => {
       btnRefresh.disabled = true;
       btnRefresh.textContent = '⟳ Pobieranie…';
 
-      await loadDashboardData();
+      await loadDashboardData(true);
 
       setTimeout(() => {
         btnRefresh.disabled = false;
@@ -448,4 +462,10 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-});
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initDashboard);
+} else {
+  initDashboard();
+}

@@ -1,6 +1,6 @@
 /* app.js — Router | Scroll Reveal | CountUp | Calculator | Countdown | Tilt | Forms */
 
-document.addEventListener('DOMContentLoaded', () => {
+function initApp() {
 
   // Zabezpieczenie przed uruchomieniem skryptu na stronach bez elementów widoków strony głównej
   if (!document.getElementById('view-g') && !document.getElementById('view-s')) {
@@ -164,6 +164,18 @@ document.addEventListener('DOMContentLoaded', () => {
      2. SCROLL REVEAL (IntersectionObserver)
   ───────────────────────────────────────────── */
   function revealAll() {
+    const elements = document.querySelectorAll('.rev:not(.in)');
+    
+    // Natychmiastowe ujawnienie elementów, które już są widoczne w oknie (fallback)
+    elements.forEach(el => {
+      const rect = el.getBoundingClientRect();
+      if (rect.top < window.innerHeight && rect.bottom > 0) {
+        el.classList.add('in');
+        const countEl = el.querySelector('[data-count]');
+        if (countEl) countUp(countEl, +countEl.dataset.count, 1200);
+      }
+    });
+
     const io = new IntersectionObserver((entries, obs) => {
       entries.forEach(entry => {
         if (entry.isIntersecting) {
@@ -173,7 +185,7 @@ document.addEventListener('DOMContentLoaded', () => {
           if (countEl) countUp(countEl, +countEl.dataset.count, 1200);
         }
       });
-    }, { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
+    }, { threshold: 0.03, rootMargin: '0px 0px -20px 0px' });
 
     document.querySelectorAll('.rev:not(.in)').forEach(el => io.observe(el));
   }
@@ -674,4 +686,10 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   initSideNav(window.location.hash);
-});
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initApp);
+} else {
+  initApp();
+}

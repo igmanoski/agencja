@@ -7,7 +7,7 @@
 get_header();
 ?>
 
-<main class="pv" style="padding-top: 100px; min-height: 70vh;">
+<main style="padding-top: 100px; min-height: 70vh;">
   <section class="wrap">
     
     <?php if ( have_posts() ) : ?>

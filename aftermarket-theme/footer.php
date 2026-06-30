@@ -25,11 +25,15 @@
         </div>
       </div>
     </div>
-    <div class="foot-btm">
-      <div class="foot-copy">&copy; <?php echo date('Y'); ?> Aftermarket Premium Instagram Growth Agency. Wszystkie prawa zastrzeżone.</div>
+    <div class="foot-btm" style="flex-wrap: wrap; gap: 15px;">
+      <div class="foot-copy">
+        &copy; <?php echo date('Y'); ?> Aftermarket. All rights reserved. &bull; 
+        <a href="<?php echo esc_url(home_url('/regulamin/')); ?>" style="color: var(--t3); text-decoration: none; margin-left: 5px;">Regulamin</a> &bull; 
+        <a href="<?php echo esc_url(home_url('/polityka-prywatnosci/')); ?>" style="color: var(--t3); text-decoration: none; margin-left: 5px;">Polityka prywatności</a>
+      </div>
       <div style="display:flex;align-items:center;gap:8px;">
         <div class="pulse-dot" style="width:8px;height:8px;"></div>
-        <span style="font-size:.76rem;color:var(--t3);">System operacyjny &ndash; Status: <span style="color:var(--green);font-weight:700;">online</span></span>
+        <span style="font-size:.76rem;color:var(--t3);">Status systemu &ndash; <span style="color:var(--green);font-weight:700;">Online</span></span>
       </div>
     </div>
   </div>

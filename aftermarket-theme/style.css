@@ -1356,7 +1356,7 @@ footer { background:#040408; border-top:1px solid rgba(255,255,255,.04); padding
   color: #fff;
   letter-spacing: -0.01em;
   margin-bottom: 20px;
-  background: linear-gradient(90deg, #FFFFFF, var(--blue));
+  background: linear-gradient(90deg, #FFFFFF 30%, #93C5FD 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   font-size: 1.5rem;
@@ -1484,5 +1484,32 @@ footer { background:#040408; border-top:1px solid rgba(255,255,255,.04); padding
   border: 1px solid rgba(244, 63, 94, 0.3) !important;
   color: #fff !important;
   border-radius: 8px !important;
+}
+
+/* Dwukolumnowy układ kasy na większych ekranach (Stripe-style) */
+@media (min-width: 992px) {
+  form.checkout.woocommerce-checkout {
+    display: grid !important;
+    grid-template-columns: 1.1fr 0.9fr !important;
+    grid-template-rows: auto 1fr !important;
+    gap: 0px 30px !important;
+    max-width: 1200px !important;
+    margin: 0 auto !important;
+  }
+  .woocommerce-checkout #customer_details {
+    grid-column: 1 !important;
+    grid-row: 1 / span 2 !important;
+    margin-bottom: 0 !important;
+  }
+  .woocommerce-checkout #order_review_heading {
+    grid-column: 2 !important;
+    grid-row: 1 !important;
+    margin-top: 0 !important;
+    margin-bottom: 20px !important;
+  }
+  .woocommerce-checkout #order_review {
+    grid-column: 2 !important;
+    grid-row: 2 !important;
+  }
 }
 
