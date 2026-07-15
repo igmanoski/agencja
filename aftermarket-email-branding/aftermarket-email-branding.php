@@ -2,8 +2,8 @@
 /**
  * Plugin Name: Aftermarket Email Branding
  * Plugin URI: https://aftermarket.ag
- * Description: Premium Custom Dark-Mode Email Branding for WooCommerce with an interactive admin settings panel to customize templates, colors, and content directly from WordPress dashboard.
- * Version: 1.2.0
+ * Description: Premium Custom Dark-Mode Email Branding for WooCommerce with an interactive admin settings panel to customize templates, colors, and email texts directly from the WordPress dashboard using a visual editor.
+ * Version: 1.3.0
  * Author: Aftermarket Team
  * License: GPL2
  */
@@ -29,7 +29,7 @@ function am_email_brand_locate_template( $template, $template_name, $template_pa
     return $template;
 }
 
-// Domyślne wartości szablonów (kod HTML i CSS)
+// Domyślne wartości szablonów (kod HTML/CSS)
 function am_email_get_default_header() {
     return '<!DOCTYPE html>
 <html {language_attributes}>
@@ -308,6 +308,37 @@ table.td-table tfoot tr:first-child td {
 }';
 }
 
+// Mapowanie typów maili do opcji w bazie WooCommerce
+function am_email_get_types() {
+    return array(
+        'customer_processing_order' => array(
+            'label'  => 'Potwierdzenie zakupu (Zamówienie w trakcie realizacji)',
+            'option' => 'woocommerce_customer_processing_order_settings',
+            'desc'   => 'Ten e-mail wysyła się do klienta automatycznie zaraz po udanej płatności w bramce Hotpay.'
+        ),
+        'customer_completed_order' => array(
+            'label'  => 'Zamówienie zrealizowane (Aktywacja usługi)',
+            'option' => 'woocommerce_customer_completed_order_settings',
+            'desc'   => 'Wysyłany, gdy ręcznie zmienisz status zamówienia na "Zrealizowane".'
+        ),
+        'customer_new_account' => array(
+            'label'  => 'Powitanie nowego konta (Login i hasło)',
+            'option' => 'woocommerce_customer_new_account_settings',
+            'desc'   => 'Wysyłany automatycznie, gdy system zakłada nowe konto dla sponsora w panelu.'
+        ),
+        'customer_invoice' => array(
+            'label'  => 'Faktura / Szczegóły zamówienia',
+            'option' => 'woocommerce_customer_invoice_settings',
+            'desc'   => 'Zawiera listę zakupionych pakietów i kwotę rozliczenia.'
+        ),
+        'customer_reset_password' => array(
+            'label'  => 'Resetowanie hasła do panelu',
+            'option' => 'woocommerce_customer_reset_password_settings',
+            'desc'   => 'Wysyłany, gdy sponsor kliknie "Nie pamiętasz hasła?".'
+        )
+    );
+}
+
 // Tworzenie menu w panelu administratora
 add_action('admin_menu', 'am_email_branding_add_menu');
 function am_email_branding_add_menu() {
@@ -336,8 +367,15 @@ function am_email_branding_render_settings() {
         return;
     }
 
+    $email_types = am_email_get_types();
+    $selected_email = isset($_GET['email_type']) ? sanitize_key($_GET['email_type']) : 'customer_processing_order';
+    if (!isset($email_types[$selected_email])) {
+        $selected_email = 'customer_processing_order';
+    }
+
     // Zapisywanie formularza
     if (isset($_POST['am_email_save_branding']) && check_admin_referer('am_email_branding_action', 'am_email_branding_nonce')) {
+        // Zapisywanie kolorów
         update_option('woocommerce_email_base_color', sanitize_hex_color($_POST['am_email_base_color']));
         update_option('woocommerce_email_background_color', sanitize_hex_color($_POST['am_email_background_color']));
         update_option('woocommerce_email_body_background_color', sanitize_hex_color($_POST['am_email_body_background_color']));
@@ -346,9 +384,18 @@ function am_email_branding_render_settings() {
         update_option('am_email_logo_text', sanitize_text_field($_POST['am_email_logo_text']));
         update_option('am_email_footer_copy', wp_kses_post($_POST['am_email_footer_copy']));
 
+        // Zapisywanie zaawansowanych kodów
         update_option('am_email_custom_header_html', wp_kses_post(stripslashes($_POST['am_email_custom_header_html'])));
         update_option('am_email_custom_footer_html', wp_kses_post(stripslashes($_POST['am_email_custom_footer_html'])));
         update_option('am_email_custom_styles_css', wp_strip_all_tags(stripslashes($_POST['am_email_custom_styles_css'])));
+
+        // Zapisywanie treści wybranego maila
+        $opt_name = $email_types[$selected_email]['option'];
+        $email_settings = get_option($opt_name, array());
+        $email_settings['subject'] = sanitize_text_field($_POST['am_email_subject']);
+        $email_settings['heading'] = sanitize_text_field($_POST['am_email_heading']);
+        $email_settings['additional_content'] = wp_kses_post(stripslashes($_POST['am_email_additional_content']));
+        update_option($opt_name, $email_settings);
 
         // Czyszczenie cache WooCommerce
         delete_transient('woocommerce_template_directory');
@@ -359,11 +406,26 @@ function am_email_branding_render_settings() {
         echo '<div class="notice notice-success is-dismissible" style="border-left-color: #F43F5E;"><p><strong>Gotowe! Zmiany zostały zapisane i wdrożone.</strong></p></div>';
     }
 
-    // Pobieramy obecne wartości z bazy
-    $base_color = get_option('woocommerce_email_base_color', '#F43F5E');
-    $bg_color   = get_option('woocommerce_email_background_color', '#0B0B14');
-    $body_color = get_option('woocommerce_email_body_background_color', '#121221');
-    $text_color = get_option('woocommerce_email_text_color', '#D4D4D8');
+    // Pobieramy obecne wartości kolorów (jeśli są czarno-białe lub puste w bazie, ustawiamy nasze premium ciemne kolory jako domyślne)
+    $base_color = get_option('woocommerce_email_base_color');
+    if (!$base_color || $base_color === '#96588a' || $base_color === '#ffffff' || $base_color === '#111111') {
+        $base_color = '#F43F5E';
+    }
+    
+    $bg_color = get_option('woocommerce_email_background_color');
+    if (!$bg_color || $bg_color === '#f7f7f7' || $bg_color === '#ffffff') {
+        $bg_color = '#0B0B14';
+    }
+
+    $body_color = get_option('woocommerce_email_body_background_color');
+    if (!$body_color || $body_color === '#ffffff') {
+        $body_color = '#121221';
+    }
+
+    $text_color = get_option('woocommerce_email_text_color');
+    if (!$text_color || $text_color === '#3c3c3c' || $text_color === '#111111') {
+        $text_color = '#D4D4D8';
+    }
 
     $logo_text   = get_option('am_email_logo_text', 'Aftermarket');
     $footer_copy = get_option('am_email_footer_copy', '&copy; ' . date('Y') . ' Aftermarket.ag. Wszelkie prawa zastrzeżone.');
@@ -372,62 +434,119 @@ function am_email_branding_render_settings() {
     $custom_footer = get_option('am_email_custom_footer_html', am_email_get_default_footer());
     $custom_styles = get_option('am_email_custom_styles_css', am_email_get_default_styles());
 
+    // Pobieramy treści wybranego maila
+    $selected_opt = $email_types[$selected_email]['option'];
+    $selected_settings = get_option($selected_opt, array());
+    $email_subject = isset($selected_settings['subject']) ? $selected_settings['subject'] : '';
+    $email_heading = isset($selected_settings['heading']) ? $selected_settings['heading'] : '';
+    $email_additional = isset($selected_settings['additional_content']) ? $selected_settings['additional_content'] : '';
+
     ?>
-    <div class="wrap" style="max-width: 800px; font-family: -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen-Sans,Ubuntu,Cantarell,sans-serif; background: #fff; padding: 30px; border-radius: 12px; border: 1px solid #e2e8f0; margin-top: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+    <div class="wrap" style="max-width: 850px; font-family: -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen-Sans,Ubuntu,Cantarell,sans-serif; background: #fff; padding: 35px; border-radius: 12px; border: 1px solid #e2e8f0; margin-top: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
         <h1 style="font-weight: 800; font-size: 26px; margin: 0 0 10px 0; color: #111;">
-            🎨 Kreator Wyglądu E-maili <span style="color: #F43F5E;">Aftermarket</span>
+            🎨 Kreator Wyglądu i Treści E-maili <span style="color: #F43F5E;">Aftermarket</span>
         </h1>
-        <p style="color: #64748b; font-size: 15px; margin: 0 0 30px 0; line-height: 1.5;">
-            Dostosuj kolory, logo oraz stopkę wiadomości wysyłanych do Twoich klientów. Wszystkie zmiany zapisują się automatycznie.
+        <p style="color: #64748b; font-size: 15px; margin: 0 0 35px 0; line-height: 1.5;">
+            Tutaj zmienisz kolorystykę swoich maili oraz edytujesz ich treść za pomocą prostego edytora tekstowego (jak w Wordzie).
         </p>
 
         <form method="post" action="">
             <?php wp_nonce_field('am_email_branding_action', 'am_email_branding_nonce'); ?>
 
-            <!-- KOLORY -->
-            <h3 style="font-size: 16px; font-weight: 700; border-bottom: 1px solid #f1f5f9; padding-bottom: 8px; margin-top: 0; color: #1e293b;">1. Kolory wiadomości</h3>
-            
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px;">
-                <div>
-                    <label style="display:block; font-weight:600; margin-bottom:8px; font-size:14px; color:#334155;">Główny kolor akcentów (przyciski, kropka w logo):</label>
-                    <input type="text" name="am_email_base_color" class="color-picker-field" value="<?php echo esc_attr($base_color); ?>" />
+            <!-- SEKCJA 1: WYBÓR MAILA I EDYCJA TREŚCI -->
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 25px; margin-bottom: 30px;">
+                <h3 style="font-size: 16px; font-weight: 700; margin-top: 0; color: #1e293b; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px;">
+                    📝 Edytor Treści Wiadomości
+                </h3>
+                
+                <div style="margin-bottom: 20px; margin-top: 15px;">
+                    <label style="display:block; font-weight:600; margin-bottom:8px; font-size:14px; color:#334155;">Wybierz e-mail, który chcesz edytować:</label>
+                    <select id="am_email_selector" style="width:100%; max-width:500px; padding:8px 12px; border-radius:6px; border:1px solid #cbd5e1; font-size:14px;" onchange="window.location.href='?page=am-email-branding&email_type=' + this.value;">
+                        <?php foreach ($email_types as $key => $info) : ?>
+                            <option value="<?php echo esc_attr($key); ?>" <?php selected($selected_email, $key); ?>>
+                                <?php echo esc_html($info['label']); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                    <p style="color:#64748b; font-size:13px; margin-top:5px; font-style:italic;">
+                        <?php echo esc_html($email_types[$selected_email]['desc']); ?>
+                    </p>
                 </div>
-                <div>
-                    <label style="display:block; font-weight:600; margin-bottom:8px; font-size:14px; color:#334155;">Kolor tła na zewnątrz (tło maila):</label>
-                    <input type="text" name="am_email_background_color" class="color-picker-field" value="<?php echo esc_attr($bg_color); ?>" />
+
+                <div style="margin-bottom: 20px;">
+                    <label for="am_email_subject" style="display:block; font-weight:600; margin-bottom:8px; font-size:14px; color:#334155;">Temat e-maila (tytuł widoczny w skrzynce klienta):</label>
+                    <input type="text" name="am_email_subject" id="am_email_subject" value="<?php echo esc_attr($email_subject); ?>" placeholder="np. Potwierdzenie zamówienia nr {order_number}" style="width:100%; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1; font-size:14px;" />
                 </div>
-                <div>
-                    <label style="display:block; font-weight:600; margin-bottom:8px; font-size:14px; color:#334155;">Kolor tła wewnątrz (karta wiadomości):</label>
-                    <input type="text" name="am_email_body_background_color" class="color-picker-field" value="<?php echo esc_attr($body_color); ?>" />
+
+                <div style="margin-bottom: 20px;">
+                    <label for="am_email_heading" style="display:block; font-weight:600; margin-bottom:8px; font-size:14px; color:#334155;">Nagłówek wewnątrz e-maila (duży napis na górze):</label>
+                    <input type="text" name="am_email_heading" id="am_email_heading" value="<?php echo esc_attr($email_heading); ?>" placeholder="np. Dziękujemy za zakupy!" style="width:100%; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1; font-size:14px;" />
                 </div>
-                <div>
-                    <label style="display:block; font-weight:600; margin-bottom:8px; font-size:14px; color:#334155;">Kolor głównego tekstu:</label>
-                    <input type="text" name="am_email_text_color" class="color-picker-field" value="<?php echo esc_attr($text_color); ?>" />
+
+                <div style="margin-bottom: 10px;">
+                    <label style="display:block; font-weight:600; margin-bottom:8px; font-size:14px; color:#334155;">Główna treść e-maila (tekst pod nagłówkiem):</label>
+                    <p style="color:#64748b; font-size:12px; margin-top:0; margin-bottom:10px;">Możesz tu pisać, pogrubiać tekst, dodawać linki oraz emotki. Wszystko jak w edytorze Word.</p>
+                    <?php 
+                    wp_editor(
+                        $email_additional, 
+                        'am_email_additional_content', 
+                        array(
+                            'textarea_name' => 'am_email_additional_content',
+                            'media_buttons' => false,
+                            'textarea_rows' => 8,
+                            'teeny'         => false,
+                            'quicktags'     => true
+                        )
+                    ); 
+                    ?>
                 </div>
             </div>
 
-            <!-- TREŚĆ -->
-            <h3 style="font-size: 16px; font-weight: 700; border-bottom: 1px solid #f1f5f9; padding-bottom: 8px; margin-top: 30px; color: #1e293b;">2. Treści nagłówka i stopki</h3>
-            
-            <div style="margin-bottom: 20px;">
-                <label for="am_email_logo_text" style="display:block; font-weight:600; margin-bottom:8px; font-size:14px; color:#334155;">Tekst Logo (wyświetla się na samej górze wiadomości):</label>
-                <input type="text" name="am_email_logo_text" id="am_email_logo_text" value="<?php echo esc_attr($logo_text); ?>" style="width:100%; max-width:400px; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1; font-size:14px;" />
-            </div>
+            <!-- SEKCJA 2: KOLORY I LOGO -->
+            <div style="background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 25px; margin-bottom: 30px;">
+                <h3 style="font-size: 16px; font-weight: 700; margin-top: 0; color: #1e293b; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px;">
+                    🎨 Kolory oraz Logo firmowe
+                </h3>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px; margin-bottom: 25px;">
+                    <div>
+                        <label style="display:block; font-weight:600; margin-bottom:8px; font-size:13px; color:#334155;">Kolor przycisków i akcentów:</label>
+                        <input type="text" name="am_email_base_color" class="color-picker-field" value="<?php echo esc_attr($base_color); ?>" />
+                    </div>
+                    <div>
+                        <label style="display:block; font-weight:600; margin-bottom:8px; font-size:13px; color:#334155;">Kolor tła na zewnątrz wiadomości:</label>
+                        <input type="text" name="am_email_background_color" class="color-picker-field" value="<?php echo esc_attr($bg_color); ?>" />
+                    </div>
+                    <div>
+                        <label style="display:block; font-weight:600; margin-bottom:8px; font-size:13px; color:#334155;">Kolor tła karty z treścią (środek maila):</label>
+                        <input type="text" name="am_email_body_background_color" class="color-picker-field" value="<?php echo esc_attr($body_color); ?>" />
+                    </div>
+                    <div>
+                        <label style="display:block; font-weight:600; margin-bottom:8px; font-size:13px; color:#334155;">Kolor czcionki tekstów:</label>
+                        <input type="text" name="am_email_text_color" class="color-picker-field" value="<?php echo esc_attr($text_color); ?>" />
+                    </div>
+                </div>
 
-            <div style="margin-bottom: 30px;">
-                <label for="am_email_footer_copy" style="display:block; font-weight:600; margin-bottom:8px; font-size:14px; color:#334155;">Podpis stopki (prawa autorskie na samym dole):</label>
-                <textarea name="am_email_footer_copy" id="am_email_footer_copy" rows="2" style="width:100%; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1; font-size:14px; font-family:sans-serif;"><?php echo esc_textarea($footer_copy); ?></textarea>
+                <div style="margin-bottom: 20px;">
+                    <label for="am_email_logo_text" style="display:block; font-weight:600; margin-bottom:8px; font-size:13px; color:#334155;">Tekst Logo (np. nazwa strony):</label>
+                    <input type="text" name="am_email_logo_text" id="am_email_logo_text" value="<?php echo esc_attr($logo_text); ?>" style="width:100%; max-width:300px; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1; font-size:14px;" />
+                </div>
+
+                <div>
+                    <label for="am_email_footer_copy" style="display:block; font-weight:600; margin-bottom:8px; font-size:13px; color:#334155;">Stopka (prawa autorskie na samym dole):</label>
+                    <textarea name="am_email_footer_copy" id="am_email_footer_copy" rows="2" style="width:100%; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1; font-size:14px; font-family:sans-serif;"><?php echo esc_textarea($footer_copy); ?></textarea>
+                </div>
             </div>
 
             <!-- UKRYTE ZAAWANSOWANE OPCJE KODU -->
             <details style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; margin-bottom: 30px;">
                 <summary style="font-weight: 700; color: #475569; cursor: pointer; outline: none; font-size: 14px; user-select: none;">
-                    🛠️ Opcje zaawansowane (Dla programistów - edycja kodu HTML/CSS)
+                    🛠️ Opcje zaawansowane (Edycja kodu HTML/CSS dla programistów)
                 </summary>
                 
                 <div style="margin-top: 15px;">
                     <p style="color: #64748b; font-size: 13px; margin-bottom: 15px;">
-                        ⚠️ Nie edytuj poniższych pól, jeśli nie znasz HTML/CSS. Zostaw je domyślne, aby zachować luksusowy układ.
+                        ⚠️ Nie zmieniaj poniższego kodu, jeśli nie jesteś informatykiem. Te ustawienia kontrolują luksusowy dark-mode e-maili.
                     </p>
 
                     <h4 style="font-weight:600; font-size:13px; margin: 15px 0 5px 0;">Kod Nagłówka (HTML):</h4>
@@ -442,10 +561,12 @@ function am_email_branding_render_settings() {
             </details>
 
             <!-- ZAPIS -->
-            <div style="border-top: 1px solid #f1f5f9; padding-top: 20px; display: flex; align-items: center; gap: 15px;">
-                <input type="submit" name="am_email_save_branding" class="button button-primary button-large" style="background: #F43F5E; border-color: #E11D48; font-weight:700; padding: 8px 30px; height: auto; font-size: 15px; border-radius: 6px; box-shadow: 0 4px 6px -1px rgba(244,63,94,0.3);" value="Zapisz ustawienia" />
+            <div style="border-top: 1px solid #f1f5f9; padding-top: 25px; display: flex; align-items: center; gap: 15px;">
+                <input type="submit" name="am_email_save_branding" class="button button-primary button-large" style="background: #F43F5E; border-color: #E11D48; font-weight:700; padding: 8px 35px; height: auto; font-size: 15px; border-radius: 6px; box-shadow: 0 4px 6px -1px rgba(244,63,94,0.3);" value="Zapisz zmiany" />
                 <a href="<?php echo esc_url(admin_url('admin.php?page=wc-settings&tab=email')); ?>" class="button button-large" style="padding:8px 20px; height:auto; font-size:15px; border-radius:6px;">Podgląd szablonu</a>
             </div>
+            
+            <input type="hidden" name="am_selected_email_type" value="<?php echo esc_attr($selected_email); ?>" />
         </form>
     </div>
 
