@@ -157,8 +157,13 @@ get_header();
     box-shadow: 0 40px 80px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05);
 }
 @media (max-width: 700px) {
-    .am-card { padding: 28px 22px; }
-    .am-co-wrap { padding: 100px 16px 80px; }
+    .am-card { padding: 24px 16px; }
+    .am-co-wrap { padding: 80px 8px 60px; overflow-x: hidden; }
+    .am-connector { display: none !important; }
+    .am-stepper { gap: 10px; margin-bottom: 30px; }
+    .am-step { max-width: none; }
+    .am-step-circle { width: 44px; height: 44px; font-size: 0.95rem; }
+    .am-step-label { font-size: 0.72rem; }
 }
 
 /* ── Panels ── */
@@ -391,7 +396,8 @@ get_header();
     align-items: start;
 }
 @media (max-width: 900px) {
-    .am-pay-layout { grid-template-columns: 1fr; }
+    .am-pay-layout { grid-template-columns: 1fr; gap: 20px; }
+    .am-summary { position: static !important; padding: 24px 16px !important; margin-top: 10px; }
 }
 
 /* ── Order summary card ── */
@@ -913,7 +919,7 @@ get_header();
                                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: rgba(255,255,255,0.6);"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
                                     <?php endif; ?>
                                 </div>
-                                <div style="flex: 1;">
+                                <div style="flex: 1; min-width: 0; word-break: break-word;">
                                     <div style="font-size:.92rem;font-weight:700; color: #fff;"><?php echo esc_html($gateway->get_title()); ?></div>
                                     <?php if ($gateway->get_description()) : ?>
                                         <div style="font-size:.75rem;color:rgba(255,255,255,.4);margin-top:2px;"><?php echo wp_kses_post($gateway->get_description()); ?></div>
