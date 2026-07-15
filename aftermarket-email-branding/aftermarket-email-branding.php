@@ -3,7 +3,7 @@
  * Plugin Name: Aftermarket Email Branding
  * Plugin URI: https://aftermarket.ag
  * Description: Premium Custom Dark-Mode Email Branding for WooCommerce with an interactive admin settings panel to customize templates, colors, and email texts directly from the WordPress dashboard using a visual editor.
- * Version: 1.5.0
+ * Version: 1.5.1
  * Author: Aftermarket Team
  * License: GPL2
  */
@@ -45,7 +45,7 @@ function am_email_style_tinymce_editor($mceInit) {
     return $mceInit;
 }
 
-// Domyślne wartości szablonów (kod HTML/CSS)
+// Domyślny Header HTML kompatybilny z parserem WooCommerce (Emogrifier)
 function am_email_get_default_header() {
     return '<!DOCTYPE html>
 <html {language_attributes}>
@@ -54,18 +54,18 @@ function am_email_get_default_header() {
 	<meta content="width=device-width, initial-scale=1.0" name="viewport">
 	<title>{site_title}</title>
 </head>
-<body marginwidth="0" topmargin="0" marginheight="0" offset="0">
-	<div id="wrapper">
+<body leftmargin="0" marginwidth="0" topmargin="0" marginheight="0" offset="0">
+	<div id="wrapper" style="background-color: {bg_color}; padding: 70px 0; margin: 0; width: 100%;">
 		<table border="0" cellpadding="0" cellspacing="0" height="100%" width="100%">
 			<tr>
 				<td align="center" valign="top">
-					<table border="0" cellpadding="0" cellspacing="0" id="template_container">
+					<table border="0" cellpadding="0" cellspacing="0" width="600" id="template_container" style="background-color: {body_color}; border: 1px solid {border_color}; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
 						<tr>
 							<td align="center" valign="top">
 								<!-- Header -->
-								<table border="0" cellpadding="0" cellspacing="0" id="template_header">
+								<table border="0" cellpadding="0" cellspacing="0" width="100%" id="template_header" style="background: linear-gradient(135deg, #1E1B4B 0%, #0B0B14 100%); border-bottom: 1px solid rgba(255,255,255,0.06); color: #ffffff;">
 									<tr>
-										<td id="header_wrapper">
+										<td id="header_wrapper" style="padding: 38px 48px; display: block;">
 											<!-- Logo / Brand Name -->
 											<div style="font-size: 26px; font-weight: 800; color: #FFFFFF; letter-spacing: -0.5px; font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, sans-serif;">
 												{logo_text}<span style="color: {base_color};">.</span>
@@ -80,15 +80,17 @@ function am_email_get_default_header() {
 						<tr>
 							<td align="center" valign="top">
 								<!-- Body -->
-								<table border="0" cellpadding="0" cellspacing="0" id="template_body">
+								<table border="0" cellpadding="0" cellspacing="0" width="100%" id="template_body">
 									<tr>
-										<td valign="top" id="body_content">
+										<td valign="top" id="body_content" style="background-color: {body_color};">
 											<!-- Content -->
 											<table border="0" cellpadding="0" cellspacing="0" width="100%">
 												<tr>
-													<td valign="top" id="body_content_inner">';
+													<td valign="top" id="body_content_inner" style="padding: 48px; color: {text_color}; font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, sans-serif; font-size: 15px; line-height: 150%;">
+';
 }
 
+// Domyślna stopka HTML kompatybilna z parserem WooCommerce (Emogrifier)
 function am_email_get_default_footer() {
     return '															</td>
 														</tr>
@@ -100,31 +102,25 @@ function am_email_get_default_footer() {
 										<!-- End Body -->
 									</td>
 								</tr>
-							</table>
-						</td>
-					</tr>
-					<tr>
-						<td align="center" valign="top">
-							<!-- Footer -->
-							<table border="0" cellpadding="10" cellspacing="0" id="template_footer">
 								<tr>
-									<td valign="top" id="credit_wrapper">
-										<table border="0" cellpadding="10" cellspacing="0" width="100%">
+									<td align="center" valign="top">
+										<!-- Footer -->
+										<table border="0" cellpadding="10" cellspacing="0" width="100%" id="template_footer" style="border-top: 1px solid {border_color}; background-color: #09090F; border-bottom-left-radius: 16px; border-bottom-right-radius: 16px;">
 											<tr>
-												<td colspan="2" valign="middle" id="credit">
-													<p style="margin: 0 0 10px 0; font-size: 13px; color: #52525B; font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, sans-serif;">
+												<td valign="top" id="credit_wrapper" style="padding: 30px 48px; text-align: center;">
+													<p style="margin: 0 0 10px 0; font-size: 13px; color: #A1A1AA; font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, sans-serif;">
 														{footer_copy}
 													</p>
-													<p style="margin: 0; font-size: 11px; color: #3F3F46; font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, sans-serif;">
+													<p style="margin: 0; font-size: 11px; color: #52525B; font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, sans-serif;">
 														Otrzymujesz tę wiadomość, ponieważ złożyłeś zamówienie lub zarejestrowałeś się w serwisie {site_title}.
 													</p>
 												</td>
 											</tr>
 										</table>
+										<!-- End Footer -->
 									</td>
 								</tr>
 							</table>
-							<!-- End Footer -->
 						</td>
 					</tr>
 				</table>
@@ -135,127 +131,72 @@ function am_email_get_default_footer() {
 </html>';
 }
 
+// Czysty CSS dla szablonu maila (Uproszczony i w 100% kompatybilny z Emogrifierem, brak zaawansowanych selektorów administracyjnych)
 function am_email_get_default_styles() {
     return 'body {
 	background-color: {bg_color};
-	padding: 0;
-	margin: 0;
-	-webkit-text-size-adjust: none !important;
-	width: 100% !important;
 }
-
 #wrapper {
 	background-color: {bg_color};
-	margin: 0;
-	padding: 70px 0;
-	-webkit-text-size-adjust: none !important;
-	width: 100% !important;
 }
-
 #template_container {
-	box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
 	background-color: {body_color};
 	border: 1px solid {border_color};
-	border-radius: 16px !important;
-	overflow: hidden;
-	max-width: 600px;
 }
-
 #template_header {
-	background: linear-gradient(135deg, #1E1B4B 0%, #0B0B14 100%);
-	border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-	color: #FFFFFF;
-	border-top-left-radius: 16px !important;
-	border-top-right-radius: 16px !important;
+	background-color: #121221;
 }
-
-#header_wrapper {
-	padding: 38px 48px;
-	display: block;
-}
-
-#template_header h1 {
-	color: #FFFFFF;
-	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-	font-size: 24px;
-	font-weight: 700;
-	line-height: 1.3;
-	margin: 0;
-	text-shadow: 0 2px 10px rgba(0,0,0,0.3);
-	-webkit-font-smoothing: antialiased;
-}
-
 #template_body {
 	background-color: {body_color};
 }
-
 #body_content {
 	background-color: {body_color};
 }
-
 #body_content_inner {
 	color: {text_color};
 	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 	font-size: 15px;
 	line-height: 150%;
-	text-align: left;
-	padding: 48px;
 }
-
 #template_footer {
-	border-top: 1px solid {border_color};
 	background-color: #09090F;
+	border-top: 1px solid {border_color};
 }
-
 #credit {
-	padding: 30px 48px;
-	text-align: center;
-	border: 0;
 	color: #A1A1AA;
 	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 	font-size: 12px;
 	line-height: 150%;
 }
-
 a {
 	color: {base_color};
-	font-weight: normal;
+	font-weight: bold;
 	text-decoration: underline;
 }
-
 h1 {
 	color: #FFFFFF;
-	display: block;
 	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 	font-size: 24px;
 	font-weight: 700;
 	line-height: 1.3;
 	margin: 0 0 18px;
-	text-align: left;
 }
-
 h2 {
 	color: #FFFFFF;
-	display: block;
 	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 	font-size: 18px;
 	font-weight: 600;
 	line-height: 1.3;
 	margin: 0 0 16px;
-	text-align: left;
 }
-
 h3 {
 	color: #FFFFFF;
-	display: block;
 	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 	font-size: 16px;
 	font-weight: 600;
 	line-height: 1.3;
 	margin: 16px 0 8px;
-	text-align: left;
 }
-
 .link-button {
 	display: inline-block;
 	padding: 13px 28px;
@@ -265,59 +206,38 @@ h3 {
 	font-weight: 700;
 	font-size: 14px;
 	border-radius: 9999px;
-	box-shadow: 0 8px 16px rgba(244, 63, 94, 0.2);
-	border: 1px solid rgba(255, 255, 255, 0.12);
 	margin: 20px 0;
 }
-
-#addresses {
-	margin-top: 20px;
-}
-
 .td {
 	color: {text_color};
 	border: 1px solid {border_color};
-	vertical-align: middle;
 }
-
 .address {
-	padding: 12px;
 	color: #A1A1AA;
 	border: 1px solid {border_color};
 }
-
-.text {
-	color: {text_color};
-	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-}
-
 table.td-table {
 	width: 100%;
 	border-collapse: collapse;
 	margin-top: 15px;
 	margin-bottom: 25px;
 }
-
 table.td-table th {
 	border-bottom: 2px solid {border_color};
 	color: #FFFFFF;
 	font-weight: 700;
 	padding: 12px 10px;
-	text-align: left;
 }
-
 table.td-table td {
 	border-bottom: 1px solid {border_color};
 	padding: 12px 10px;
 	color: {text_color};
 }
-
 table.td-table tfoot td {
 	border-bottom: none;
 	font-weight: 700;
 	padding: 8px 10px;
 }
-
 table.td-table tfoot tr:first-child td {
 	border-top: 2px solid {border_color};
 	padding-top: 15px;
@@ -716,7 +636,7 @@ function am_email_branding_render_settings() {
                 </div>
 
                 <!-- PRAWA KOLUMNA: LIVE PODGLĄD MAILA W IFRAMIE -->
-                <div style="width: 360px; flex-shrink: 0; position: sticky; top: 50px;">
+                <div style="width: 420px; flex-shrink: 0; position: sticky; top: 50px;">
                     <h3 style="font-size: 16px; font-weight: 700; margin-top: 0; color: #1e293b; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px;">
                         👁️ Podgląd wiadomości na żywo
                     </h3>

@@ -1,6 +1,6 @@
 <?php
 /**
- * Dynamic Email Styles
+ * Dynamic Email Styles override in plugin
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
