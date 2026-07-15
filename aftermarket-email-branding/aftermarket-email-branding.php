@@ -3,7 +3,7 @@
  * Plugin Name: Aftermarket Email Branding
  * Plugin URI: https://aftermarket.ag
  * Description: Premium Custom Dark-Mode Email Branding for WooCommerce with an interactive admin settings panel to customize templates, colors, and email texts directly from the WordPress dashboard using a visual editor.
- * Version: 1.3.0
+ * Version: 1.4.0
  * Author: Aftermarket Team
  * License: GPL2
  */
@@ -27,6 +27,22 @@ function am_email_brand_locate_template( $template, $template_name, $template_pa
         }
     }
     return $template;
+}
+
+// Stylizowanie wnętrza edytora wizualnego (TinyMCE), aby odpowiadało wybranej kolorystyce
+add_filter('tiny_mce_before_init', 'am_email_style_tinymce_editor');
+function am_email_style_tinymce_editor($mceInit) {
+    if (isset($_GET['page']) && $_GET['page'] === 'am-email-branding') {
+        $base_color = get_option('woocommerce_email_base_color', '#F43F5E');
+        $body_color = get_option('woocommerce_email_body_background_color', '#121221');
+        $text_color = get_option('woocommerce_email_text_color', '#D4D4D8');
+
+        // Wstrzykujemy style CSS bezpośrednio do ramki edytora wizualnego
+        $custom_css = "body.mce-content-body { background-color: {$body_color} !important; color: {$text_color} !important; font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, sans-serif !important; padding: 20px !important; } a { color: {$base_color} !important; text-decoration: underline !important; }";
+        
+        $mceInit['content_style'] = $custom_css;
+    }
+    return $mceInit;
 }
 
 // Domyślne wartości szablonów (kod HTML/CSS)
@@ -442,6 +458,19 @@ function am_email_branding_render_settings() {
     $email_additional = isset($selected_settings['additional_content']) ? $selected_settings['additional_content'] : '';
 
     ?>
+    <style>
+        /* Dostosowanie obramowania i przycisków w samym kontenerze edytora w panelu administratora */
+        #wp-am_email_additional_content-wrap .wp-editor-container {
+            border: 1px solid #cbd5e1 !important;
+            border-radius: 0 0 6px 6px !important;
+        }
+        #wp-am_email_additional_content-wrap .mce-toppart {
+            border-radius: 6px 6px 0 0 !important;
+            border: 1px solid #cbd5e1 !important;
+            border-bottom: none !important;
+        }
+    </style>
+
     <div class="wrap" style="max-width: 850px; font-family: -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen-Sans,Ubuntu,Cantarell,sans-serif; background: #fff; padding: 35px; border-radius: 12px; border: 1px solid #e2e8f0; margin-top: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
         <h1 style="font-weight: 800; font-size: 26px; margin: 0 0 10px 0; color: #111;">
             🎨 Kreator Wyglądu i Treści E-maili <span style="color: #F43F5E;">Aftermarket</span>
@@ -485,7 +514,7 @@ function am_email_branding_render_settings() {
 
                 <div style="margin-bottom: 10px;">
                     <label style="display:block; font-weight:600; margin-bottom:8px; font-size:14px; color:#334155;">Główna treść e-maila (tekst pod nagłówkiem):</label>
-                    <p style="color:#64748b; font-size:12px; margin-top:0; margin-bottom:10px;">Możesz tu pisać, pogrubiać tekst, dodawać linki oraz emotki. Wszystko jak w edytorze Word.</p>
+                    <p style="color:#64748b; font-size:12px; margin-top:0; margin-bottom:10px;">Poniższy edytor automatycznie dopasuje kolory tła i czcionek do Twoich ustawień, pokazując realny podgląd maila w czasie pisania!</p>
                     <?php 
                     wp_editor(
                         $email_additional, 
@@ -493,7 +522,7 @@ function am_email_branding_render_settings() {
                         array(
                             'textarea_name' => 'am_email_additional_content',
                             'media_buttons' => false,
-                            'textarea_rows' => 8,
+                            'textarea_rows' => 10,
                             'teeny'         => false,
                             'quicktags'     => true
                         )
