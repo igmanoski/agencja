@@ -3,7 +3,7 @@
  * Plugin Name: Aftermarket Email Branding
  * Plugin URI: https://aftermarket.ag
  * Description: Premium Custom Dark-Mode Email Branding for WooCommerce with an interactive admin settings panel to customize templates, colors, and content directly from WordPress dashboard.
- * Version: 1.1.0
+ * Version: 1.2.0
  * Author: Aftermarket Team
  * License: GPL2
  */
@@ -356,7 +356,7 @@ function am_email_branding_render_settings() {
             wc_delete_product_transients();
         }
 
-        echo '<div class="notice notice-success is-dismissible"><p><strong>Ustawienia zostały pomyślnie zapisane i wdrożone!</strong></p></div>';
+        echo '<div class="notice notice-success is-dismissible" style="border-left-color: #F43F5E;"><p><strong>Gotowe! Zmiany zostały zapisane i wdrożone.</strong></p></div>';
     }
 
     // Pobieramy obecne wartości z bazy
@@ -373,95 +373,84 @@ function am_email_branding_render_settings() {
     $custom_styles = get_option('am_email_custom_styles_css', am_email_get_default_styles());
 
     ?>
-    <div class="wrap" style="max-width: 1000px; font-family: -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen-Sans,Ubuntu,Cantarell,sans-serif;">
-        <h1 style="font-weight: 800; font-size: 28px; margin-bottom: 20px; color: #111;">
-            Branding E-maili WooCommerce <span style="color: #F43F5E;">Aftermarket</span>
+    <div class="wrap" style="max-width: 800px; font-family: -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen-Sans,Ubuntu,Cantarell,sans-serif; background: #fff; padding: 30px; border-radius: 12px; border: 1px solid #e2e8f0; margin-top: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+        <h1 style="font-weight: 800; font-size: 26px; margin: 0 0 10px 0; color: #111;">
+            🎨 Kreator Wyglądu E-maili <span style="color: #F43F5E;">Aftermarket</span>
         </h1>
-        <p style="color: #666; font-size: 15px; margin-bottom: 30px;">
-            Poniższy panel pozwala dynamicznie konfigurować wygląd i treść wszystkich wiadomości transakcyjnych wysyłanych przez WooCommerce.
+        <p style="color: #64748b; font-size: 15px; margin: 0 0 30px 0; line-height: 1.5;">
+            Dostosuj kolory, logo oraz stopkę wiadomości wysyłanych do Twoich klientów. Wszystkie zmiany zapisują się automatycznie.
         </p>
 
         <form method="post" action="">
             <?php wp_nonce_field('am_email_branding_action', 'am_email_branding_nonce'); ?>
 
-            <!-- KARTA 1: KOLORYSTYKA I TREŚĆ -->
-            <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 30px; margin-bottom: 24px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
-                <h2 style="margin-top:0; border-bottom: 2px solid #f1f5f9; padding-bottom: 12px; font-weight:700; font-size:18px;">🎨 Podstawowa paleta kolorów i Treść</h2>
+            <!-- KOLORY -->
+            <h3 style="font-size: 16px; font-weight: 700; border-bottom: 1px solid #f1f5f9; padding-bottom: 8px; margin-top: 0; color: #1e293b;">1. Kolory wiadomości</h3>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px;">
+                <div>
+                    <label style="display:block; font-weight:600; margin-bottom:8px; font-size:14px; color:#334155;">Główny kolor akcentów (przyciski, kropka w logo):</label>
+                    <input type="text" name="am_email_base_color" class="color-picker-field" value="<?php echo esc_attr($base_color); ?>" />
+                </div>
+                <div>
+                    <label style="display:block; font-weight:600; margin-bottom:8px; font-size:14px; color:#334155;">Kolor tła na zewnątrz (tło maila):</label>
+                    <input type="text" name="am_email_background_color" class="color-picker-field" value="<?php echo esc_attr($bg_color); ?>" />
+                </div>
+                <div>
+                    <label style="display:block; font-weight:600; margin-bottom:8px; font-size:14px; color:#334155;">Kolor tła wewnątrz (karta wiadomości):</label>
+                    <input type="text" name="am_email_body_background_color" class="color-picker-field" value="<?php echo esc_attr($body_color); ?>" />
+                </div>
+                <div>
+                    <label style="display:block; font-weight:600; margin-bottom:8px; font-size:14px; color:#334155;">Kolor głównego tekstu:</label>
+                    <input type="text" name="am_email_text_color" class="color-picker-field" value="<?php echo esc_attr($text_color); ?>" />
+                </div>
+            </div>
+
+            <!-- TREŚĆ -->
+            <h3 style="font-size: 16px; font-weight: 700; border-bottom: 1px solid #f1f5f9; padding-bottom: 8px; margin-top: 30px; color: #1e293b;">2. Treści nagłówka i stopki</h3>
+            
+            <div style="margin-bottom: 20px;">
+                <label for="am_email_logo_text" style="display:block; font-weight:600; margin-bottom:8px; font-size:14px; color:#334155;">Tekst Logo (wyświetla się na samej górze wiadomości):</label>
+                <input type="text" name="am_email_logo_text" id="am_email_logo_text" value="<?php echo esc_attr($logo_text); ?>" style="width:100%; max-width:400px; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1; font-size:14px;" />
+            </div>
+
+            <div style="margin-bottom: 30px;">
+                <label for="am_email_footer_copy" style="display:block; font-weight:600; margin-bottom:8px; font-size:14px; color:#334155;">Podpis stopki (prawa autorskie na samym dole):</label>
+                <textarea name="am_email_footer_copy" id="am_email_footer_copy" rows="2" style="width:100%; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1; font-size:14px; font-family:sans-serif;"><?php echo esc_textarea($footer_copy); ?></textarea>
+            </div>
+
+            <!-- UKRYTE ZAAWANSOWANE OPCJE KODU -->
+            <details style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; margin-bottom: 30px;">
+                <summary style="font-weight: 700; color: #475569; cursor: pointer; outline: none; font-size: 14px; user-select: none;">
+                    🛠️ Opcje zaawansowane (Dla programistów - edycja kodu HTML/CSS)
+                </summary>
                 
-                <table class="form-table" style="margin-top: 15px;">
-                    <tr>
-                        <th scope="row"><label style="font-weight:600;">Kolor główny (Akcent):</label></th>
-                        <td>
-                            <input type="text" name="am_email_base_color" class="color-picker-field" value="<?php echo esc_attr($base_color); ?>" />
-                            <p class="description">Główny kolor akcentów, przycisków oraz logo.</p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row"><label style="font-weight:600;">Kolor tła e-maila:</label></th>
-                        <td>
-                            <input type="text" name="am_email_background_color" class="color-picker-field" value="<?php echo esc_attr($bg_color); ?>" />
-                            <p class="description">Tło na zewnątrz głównej karty wiadomości.</p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row"><label style="font-weight:600;">Kolor tła treści:</label></th>
-                        <td>
-                            <input type="text" name="am_email_body_background_color" class="color-picker-field" value="<?php echo esc_attr($body_color); ?>" />
-                            <p class="description">Tło wewnątrz karty z wiadomością (grafitowe tło).</p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row"><label style="font-weight:600;">Kolor tekstu:</label></th>
-                        <td>
-                            <input type="text" name="am_email_text_color" class="color-picker-field" value="<?php echo esc_attr($text_color); ?>" />
-                            <p class="description">Główny kolor czcionki w wiadomości.</p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row"><label for="am_email_logo_text" style="font-weight:600;">Tekst Logo w nagłówku:</label></th>
-                        <td>
-                            <input type="text" name="am_email_logo_text" id="am_email_logo_text" value="<?php echo esc_attr($logo_text); ?>" class="regular-text" style="padding: 6px 10px; border-radius: 6px;" />
-                            <p class="description">Wpisz tekst, który wyświetli się na samej górze maila jako logo (np. Aftermarket).</p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row"><label for="am_email_footer_copy" style="font-weight:600;">Stopka e-maila:</label></th>
-                        <td>
-                            <textarea name="am_email_footer_copy" id="am_email_footer_copy" rows="2" class="large-text" style="padding: 10px; border-radius: 6px;"><?php echo esc_textarea($footer_copy); ?></textarea>
-                            <p class="description">Treść copyrightu na samym dole wiadomości. Obsługuje podstawowy kod HTML.</p>
-                        </td>
-                    </tr>
-                </table>
-            </div>
+                <div style="margin-top: 15px;">
+                    <p style="color: #64748b; font-size: 13px; margin-bottom: 15px;">
+                        ⚠️ Nie edytuj poniższych pól, jeśli nie znasz HTML/CSS. Zostaw je domyślne, aby zachować luksusowy układ.
+                    </p>
 
-            <!-- KARTA 2: ZAAWANSOWANY EDYTOR KODU SZABLONÓW -->
-            <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 30px; margin-bottom: 24px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
-                <h2 style="margin-top:0; border-bottom: 2px solid #f1f5f9; padding-bottom: 12px; font-weight:700; font-size:18px;">💻 Zaawansowany Edytor Kodu HTML & CSS</h2>
-                <p style="color: #555; margin-bottom: 20px;">
-                    Możesz bezpośrednio zmodyfikować kod szablonów maili. Tagi takie jak <code>{base_color}</code>, <code>{bg_color}</code>, <code>{body_color}</code>, <code>{text_color}</code>, <code>{logo_text}</code>, <code>{footer_copy}</code> zostaną automatycznie zamienione na wartości zdefiniowane powyżej.
-                </p>
+                    <h4 style="font-weight:600; font-size:13px; margin: 15px 0 5px 0;">Kod Nagłówka (HTML):</h4>
+                    <textarea name="am_email_custom_header_html" rows="8" style="width: 100%; font-family: monospace; font-size: 12px; padding: 8px; border:1px solid #cbd5e1; border-radius:4px;"><?php echo esc_textarea($custom_header); ?></textarea>
 
-                <h3 style="font-weight: 700; font-size: 15px; margin-bottom: 6px;">Szablon Nagłówka (Header HTML):</h3>
-                <textarea name="am_email_custom_header_html" rows="12" style="width: 100%; font-family: monospace; padding: 12px; border-radius: 8px; background: #f8fafc; border: 1px solid #cbd5e1;"><?php echo esc_textarea($custom_header); ?></textarea>
+                    <h4 style="font-weight:600; font-size:13px; margin: 15px 0 5px 0;">Kod Stopki (HTML):</h4>
+                    <textarea name="am_email_custom_footer_html" rows="8" style="width: 100%; font-family: monospace; font-size: 12px; padding: 8px; border:1px solid #cbd5e1; border-radius:4px;"><?php echo esc_textarea($custom_footer); ?></textarea>
 
-                <h3 style="font-weight: 700; font-size: 15px; margin-top: 20px; margin-bottom: 6px;">Szablon Stopki (Footer HTML):</h3>
-                <textarea name="am_email_custom_footer_html" rows="12" style="width: 100%; font-family: monospace; padding: 12px; border-radius: 8px; background: #f8fafc; border: 1px solid #cbd5e1;"><?php echo esc_textarea($custom_footer); ?></textarea>
+                    <h4 style="font-weight:600; font-size:13px; margin: 15px 0 5px 0;">Arkusz Stylów CSS:</h4>
+                    <textarea name="am_email_custom_styles_css" rows="8" style="width: 100%; font-family: monospace; font-size: 12px; padding: 8px; border:1px solid #cbd5e1; border-radius:4px;"><?php echo esc_textarea($custom_styles); ?></textarea>
+                </div>
+            </details>
 
-                <h3 style="font-weight: 700; font-size: 15px; margin-top: 20px; margin-bottom: 6px;">Style CSS (email-styles.php):</h3>
-                <textarea name="am_email_custom_styles_css" rows="15" style="width: 100%; font-family: monospace; padding: 12px; border-radius: 8px; background: #f8fafc; border: 1px solid #cbd5e1;"><?php echo esc_textarea($custom_styles); ?></textarea>
-            </div>
-
-            <!-- PRZYCISK ZAPISU -->
-            <div style="margin-top: 30px;">
-                <input type="submit" name="am_email_save_branding" class="button button-primary button-large" style="background: #F43F5E; border-color: #E11D48; font-weight:700; padding: 6px 30px; height: auto; font-size: 15px; border-radius: 6px; box-shadow: 0 4px 6px -1px rgba(244,63,94,0.35);" value="Zapisz i Wdróż branding" />
-                <a href="<?php echo esc_url(admin_url('admin.php?page=wc-settings&tab=email')); ?>" class="button button-large" style="margin-left:12px; padding:6px 20px; height:auto; font-size:15px; border-radius:6px;">Podgląd w WooCommerce</a>
+            <!-- ZAPIS -->
+            <div style="border-top: 1px solid #f1f5f9; padding-top: 20px; display: flex; align-items: center; gap: 15px;">
+                <input type="submit" name="am_email_save_branding" class="button button-primary button-large" style="background: #F43F5E; border-color: #E11D48; font-weight:700; padding: 8px 30px; height: auto; font-size: 15px; border-radius: 6px; box-shadow: 0 4px 6px -1px rgba(244,63,94,0.3);" value="Zapisz ustawienia" />
+                <a href="<?php echo esc_url(admin_url('admin.php?page=wc-settings&tab=email')); ?>" class="button button-large" style="padding:8px 20px; height:auto; font-size:15px; border-radius:6px;">Podgląd szablonu</a>
             </div>
         </form>
     </div>
 
     <script type="text/javascript">
         jQuery(document).ready(function($){
-            // Aktywacja Wordpress Color Picker na polach tekstowych
             $('.color-picker-field').wpColorPicker();
         });
     </script>
