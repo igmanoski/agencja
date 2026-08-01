@@ -931,7 +931,7 @@ add_action('template_redirect', function() {
    11. INSTAGRAM FOLLOWER SCRAPER (Statystyki)
 ═══════════════════════════════════════════ */
 
-// A. Pomocnicza funkcja parsująca skrócone liczby (np. 12.3k, 12 tys., 1.5M)
+// Pomocnicza funkcja parsująca skrócone liczby (np. 12.3k, 12 tys., 1.5M)
 function aftermarket_parse_short_number($string) {
     $string = str_replace(array(' ', ','), '', $string);
     $string = str_replace('tys.', 'k', $string);
@@ -948,70 +948,108 @@ function aftermarket_parse_short_number($string) {
     return (int) $number;
 }
 
+// Pomocnicza funkcja wyciągająca liczbę obserwujących z dowolnego formatu JSON z RapidAPI
+function aftermarket_extract_followers_count($data) {
+    if (!is_array($data)) return null;
+
+    $possible_paths = array(
+        $data['followers'] ?? null,
+        $data['follower_count'] ?? null,
+        $data['followers_count'] ?? null,
+        $data['data']['followers'] ?? null,
+        $data['data']['follower_count'] ?? null,
+        $data['data']['user']['follower_count'] ?? null,
+        $data['data']['user']['edge_followed_by']['count'] ?? null,
+        $data['user']['follower_count'] ?? null,
+        $data['user']['edge_followed_by']['count'] ?? null,
+        $data['result']['follower_count'] ?? null,
+        $data['result']['user']['follower_count'] ?? null,
+        $data['result']['followers'] ?? null,
+    );
+
+    foreach ($possible_paths as $val) {
+        if ($val !== null && is_numeric($val) && (int)$val > 0) {
+            return (int)$val;
+        }
+        if (is_string($val) && !empty($val)) {
+            $parsed = aftermarket_parse_short_number($val);
+            if ($parsed > 0) return $parsed;
+        }
+    }
+    return null;
+}
+
 function aftermarket_scrape_instagram_followers($username) {
     $username = ltrim(trim($username), '@');
     if (empty($username)) return false;
 
-    $api_key = get_option('am_rapidapi_key', '');
+    $api_key = trim(get_option('am_rapidapi_key', ''));
     if (empty($api_key)) {
         return false;
     }
 
-    // Odpytujemy bezpośrednio z PHP do RapidAPI (Host: instagram-data19)
-    // Próbujemy najpopularniejszy endpoint user-info
-    $url = 'https://instagram-data19.p.rapidapi.com/user-info/?username_or_id_or_url=' . urlencode($username);
-    $args = array(
-        'timeout' => 15,
-        'headers' => array(
-            'x-rapidapi-key'  => $api_key,
-            'x-rapidapi-host' => 'instagram-data19.p.rapidapi.com'
-        )
+    // Lista powszechnie stosowanych domen i endpointów na RapidAPI dla Instagrama
+    $endpoints = array(
+        array(
+            'host' => 'instagram-data120.p.rapidapi.com',
+            'url'  => 'https://instagram-data120.p.rapidapi.com/user-info/?username_or_id_or_url=' . urlencode($username),
+        ),
+        array(
+            'host' => 'instagram-data120.p.rapidapi.com',
+            'url'  => 'https://instagram-data120.p.rapidapi.com/info/?username_or_id_or_url=' . urlencode($username),
+        ),
+        array(
+            'host' => 'instagram-data19.p.rapidapi.com',
+            'url'  => 'https://instagram-data19.p.rapidapi.com/user-info/?username_or_id_or_url=' . urlencode($username),
+        ),
+        array(
+            'host' => 'instagram-data19.p.rapidapi.com',
+            'url'  => 'https://instagram-data19.p.rapidapi.com/info/?username_or_id_or_url=' . urlencode($username),
+        ),
+        array(
+            'host' => 'instagram-scraper-api2.p.rapidapi.com',
+            'url'  => 'https://instagram-scraper-api2.p.rapidapi.com/v1/info?username_or_id_or_url=' . urlencode($username),
+        ),
     );
 
-    $response = wp_remote_get($url, $args);
-    if (!is_wp_error($response) && wp_remote_retrieve_response_code($response) === 200) {
-        $body = wp_remote_retrieve_body($response);
-        $data = json_decode($body, true);
+    $last_error_code = null;
 
-        $followers = null;
-        if (is_array($data)) {
-            $followers = (
-                $data['followers'] ??
-                $data['follower_count'] ??
-                ($data['data']['followers'] ?? null) ??
-                ($data['data']['follower_count'] ?? null) ??
-                ($data['data']['user']['edge_followed_by']['count'] ?? null) ??
-                ($data['data']['user']['follower_count'] ?? null)
-            );
+    foreach ($endpoints as $ep) {
+        $args = array(
+            'timeout' => 12,
+            'headers' => array(
+                'x-rapidapi-key'  => $api_key,
+                'x-rapidapi-host' => $ep['host']
+            )
+        );
+
+        $response = wp_remote_get($ep['url'], $args);
+        
+        if (is_wp_error($response)) {
+            continue;
         }
 
-        if ($followers !== null && (int)$followers > 0) {
-            return (int)$followers;
+        $code = wp_remote_retrieve_response_code($response);
+        $last_error_code = $code;
+
+        if ($code === 200) {
+            $body = wp_remote_retrieve_body($response);
+            $data = json_decode($body, true);
+            $followers = aftermarket_extract_followers_count($data);
+
+            if ($followers !== null && $followers > 0) {
+                return (int)$followers;
+            }
         }
     }
 
-    // Jeśli user-info zawiedzie, próbujemy zapasowo endpoint info
-    $url = 'https://instagram-data19.p.rapidapi.com/info/?username_or_id_or_url=' . urlencode($username);
-    $response = wp_remote_get($url, $args);
-    if (!is_wp_error($response) && wp_remote_retrieve_response_code($response) === 200) {
-        $body = wp_remote_retrieve_body($response);
-        $data = json_decode($body, true);
-
-        $followers = null;
-        if (is_array($data)) {
-            $followers = (
-                $data['followers'] ??
-                $data['follower_count'] ??
-                ($data['data']['followers'] ?? null) ??
-                ($data['data']['follower_count'] ?? null) ??
-                ($data['data']['user']['edge_followed_by']['count'] ?? null) ??
-                ($data['data']['user']['follower_count'] ?? null)
-            );
-        }
-
-        if ($followers !== null && (int)$followers > 0) {
-            return (int)$followers;
-        }
+    // Diagnostyka błędu w przypadku niepowodzenia
+    if ($last_error_code === 401 || $last_error_code === 403) {
+        // Nieprawidłowy klucz lub brak aktywnej subskrypcji
+        return false;
+    } elseif ($last_error_code === 429) {
+        // Przekroczony limit zapytań w pakiecie
+        return false;
     }
 
     return false;
