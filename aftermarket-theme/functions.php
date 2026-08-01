@@ -878,7 +878,18 @@ add_filter('woocommerce_enable_guest_checkout', function($value) {
     return 'no';
 });
 
-// C. Dodanie pola Instagram do formularza zamówienia
+// C. Dodanie pola Instagram i dostosowanie pól w WooCommerce
+add_filter('woocommerce_checkout_fields', function($fields) {
+    unset($fields['billing']['billing_address_1']['required']);
+    unset($fields['billing']['billing_address_2']['required']);
+    unset($fields['billing']['billing_city']['required']);
+    unset($fields['billing']['billing_postcode']['required']);
+    unset($fields['billing']['billing_country']['required']);
+    unset($fields['billing']['billing_state']['required']);
+    unset($fields['billing']['billing_phone']['required']);
+    return $fields;
+});
+
 add_filter('woocommerce_billing_fields', function ($fields) {
     $fields['billing_ig_username'] = array(
         'type'        => 'text',

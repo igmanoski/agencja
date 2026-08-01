@@ -1025,7 +1025,7 @@ get_header();
     <input type="hidden" name="billing_first_name"  id="wc-first">
     <input type="hidden" name="billing_last_name"   id="wc-last">
     <input type="hidden" name="billing_email"        id="wc-email">
-    <input type="hidden" name="billing_phone"        id="wc-phone">
+    <input type="hidden" name="billing_phone"        id="wc-phone" value="500000000">
     <input type="hidden" name="billing_address_1"   id="wc-addr">
     <input type="hidden" name="billing_city"         id="wc-city">
     <input type="hidden" name="billing_postcode"     id="wc-post">
@@ -1036,7 +1036,7 @@ get_header();
     <input type="hidden" name="payment_method"       id="wc-payment-method" value="<?php echo esc_attr($default_gateway); ?>">
     <input type="hidden" name="woocommerce-process-checkout-nonce" value="<?php echo esc_attr($checkout_nonce); ?>">
     <input type="hidden" name="_wp_http_referer"     value="<?php echo esc_url($_SERVER['REQUEST_URI'] ?? '/zamowienie/'); ?>">
-    <input type="hidden" name="createaccount"        value="0">
+    <input type="hidden" name="createaccount"        id="wc-createaccount" value="<?php echo $is_logged_in ? '0' : '1'; ?>">
     <input type="hidden" name="terms"                value="on">
     <input type="hidden" name="terms-field"          value="1">
 </form>
@@ -1175,10 +1175,10 @@ get_header();
         set('wc-first',   v('d-first'));
         set('wc-last',    v('d-last'));
         set('wc-email',   v('d-email'));
-        set('wc-phone',   '');
-        set('wc-addr',    v('d-addr')  || 'brak');
-        set('wc-city',    v('d-city')  || 'Polska');
-        set('wc-post',    v('d-post')  || '00-000');
+        set('wc-phone',   '500000000');
+        set('wc-addr',    v('d-addr')  || 'Warszawa');
+        set('wc-city',    v('d-city')  || 'Warszawa');
+        set('wc-post',    v('d-post')  || '00-001');
         set('wc-ig',      v('d-ig'));
         set('wc-company', v('d-company') || '');
         set('wc-nip',     v('d-nip')     || '');
@@ -1196,7 +1196,12 @@ get_header();
             if (d.result === 'success' && d.redirect) {
                 window.location.href = d.redirect;
             } else {
-                const msg = d.messages ? d.messages.replace(/<[^>]+>/g, '').trim() : 'Nie udało się złożyć zamówienia. Sprawdź dane i spróbuj ponownie.';
+                let msg = 'Nie udało się złożyć zamówienia. Sprawdź dane i spróbuj ponownie.';
+                if (d.messages) {
+                    const temp = document.createElement('div');
+                    temp.innerHTML = d.messages;
+                    msg = temp.textContent.trim() || msg;
+                }
                 showErr('err-pay', msg);
             }
         })
