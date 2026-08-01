@@ -1154,6 +1154,55 @@ function am_api_update_ig_followers() {
 add_action('wp_ajax_am_update_ig_followers',        'am_api_update_ig_followers');
 add_action('wp_ajax_nopriv_am_update_ig_followers', 'am_api_update_ig_followers');
 
+// H. AJAX: Wymuszenie odświeżenia statystyk wybranego sponsora (tylko dla administratora)
+function am_ajax_admin_force_refresh_user() {
+    if (!current_user_can('manage_options')) {
+        wp_send_json_error('Brak uprawnień administratora.', 403);
+    }
+
+    $uid = isset($_POST['user_id']) ? (int)$_POST['user_id'] : 0;
+    if ($uid <= 0) {
+        wp_send_json_error('Błędny identyfikator użytkownika.', 400);
+    }
+
+    $username = get_user_meta($uid, 'am_ig_username', true);
+    if (empty($username)) {
+        wp_send_json_error('Ten użytkownik nie ma przypisanego konta Instagram.', 400);
+    }
+
+    $followers = aftermarket_scrape_instagram_followers($username);
+    if ($followers === false) {
+        $error_msg = 'Nie udało się pobrać danych z API. Sprawdź poprawność nazwy profilu lub limity RapidAPI.';
+        update_user_meta($uid, 'am_ig_error', $error_msg);
+        wp_send_json_error($error_msg);
+    }
+
+    // Aktualizujemy dane
+    update_user_meta($uid, 'am_current_followers', $followers);
+    update_user_meta($uid, 'am_ig_last_update', time());
+    delete_user_meta($uid, 'am_ig_error');
+
+    // Aktualizujemy historię do wykresu
+    $start = (int)get_user_meta($uid, 'am_followers_start', true);
+    if ($start === 0) {
+        update_user_meta($uid, 'am_followers_start', $followers);
+        $start = $followers;
+    }
+
+    $hist = get_user_meta($uid, 'am_followers_history', true);
+    if (!is_array($hist)) $hist = array();
+    $hist[date('Y-m-d')] = $followers;
+    if (count($hist) > 30) $hist = array_slice($hist, -30, null, true);
+    update_user_meta($uid, 'am_followers_history', $hist);
+
+    wp_send_json_success(array(
+        'followers' => $followers,
+        'growth'    => $followers - $start,
+        'updated'   => date('d.m.Y H:i', time())
+    ));
+}
+add_action('wp_ajax_am_admin_force_refresh_user', 'am_ajax_admin_force_refresh_user');
+
 
 
 

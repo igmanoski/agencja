@@ -190,6 +190,184 @@ get_header();
       </div>
     </div>
 
+    <?php if (current_user_can('manage_options')) : 
+        $sponsors = get_users(array(
+            'meta_key'     => 'am_ig_username',
+            'meta_compare' => 'EXISTS',
+            'number'       => 100,
+        ));
+    ?>
+    <!-- ════ ADMIN MONITORING PANEL ════ -->
+    <style>
+        .am-spinner {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border: 2px solid rgba(255, 255, 255, 0.25);
+            border-radius: 50%;
+            border-top-color: var(--pink);
+            animation: am-spin 0.8s linear infinite;
+            vertical-align: middle;
+        }
+        @keyframes am-spin {
+            to { transform: rotate(360deg); }
+        }
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+    </style>
+    <div class="card rev d2" style="margin-top: 30px; padding: 30px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 15px; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
+            <div>
+                <div class="chip" style="background: rgba(244,63,94,0.1); color: var(--pink); font-weight: 700;">🛡️ Panel Administratora</div>
+                <h3 style="font-size: 1.25rem; text-transform: uppercase; margin-top: 5px; margin-bottom: 0;">Monitoring Kont Sponsorskich</h3>
+            </div>
+            <div style="font-size: 0.8rem; color: rgba(255,255,255,0.45);">
+                Wszystkich profili: <strong style="color: #fff;"><?php echo count($sponsors); ?></strong>
+            </div>
+        </div>
+
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.88rem; text-align: left; min-width: 800px;">
+                <thead>
+                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.1); color: rgba(255,255,255,0.45);">
+                        <th style="padding: 10px 5px;">Nazwa / Email</th>
+                        <th style="padding: 10px 5px;">Profil Instagram</th>
+                        <th style="padding: 10px 5px; text-align: center;">Start</th>
+                        <th style="padding: 10px 5px; text-align: center;">Aktualnie</th>
+                        <th style="padding: 10px 5px; text-align: center;">Przyrost</th>
+                        <th style="padding: 10px 5px; text-align: center;">Ostatnia synchronizacja</th>
+                        <th style="padding: 10px 5px; text-align: center;">Błędy / Status</th>
+                        <th style="padding: 10px 5px; text-align: right;">Akcja</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php 
+                    foreach ($sponsors as $s) :
+                        $s_id = $s->ID;
+                        $s_email = $s->user_email;
+                        $s_ig = get_user_meta($s_id, 'am_ig_username', true);
+                        $s_start = (int)get_user_meta($s_id, 'am_followers_start', true);
+                        $s_current = (int)get_user_meta($s_id, 'am_current_followers', true);
+                        $s_last_update = get_user_meta($s_id, 'am_ig_last_update', true);
+                        $s_error = get_user_meta($s_id, 'am_ig_error', true);
+                        
+                        $s_growth = $s_current - $s_start;
+                        $s_time_formatted = $s_last_update ? date('d.m.Y H:i', $s_last_update) : 'Nigdy';
+                    ?>
+                        <tr id="admin-user-row-<?php echo $s_id; ?>" style="border-bottom: 1px solid rgba(255,255,255,0.04); transition: background 0.2s;">
+                            <td style="padding: 12px 5px;">
+                                <strong><?php echo esc_html($s->display_name); ?></strong><br>
+                                <span style="font-size: 0.75rem; color: rgba(255,255,255,0.4);"><?php echo esc_html($s_email); ?></span>
+                            </td>
+                            <td style="padding: 12px 5px; color: var(--pink); font-weight: 700;">
+                                <a href="https://instagram.com/<?php echo esc_attr(ltrim($s_ig, '@')); ?>" target="_blank" style="color: inherit; text-decoration: none;">
+                                    <?php echo esc_html($s_ig); ?> ↗
+                                </a>
+                            </td>
+                            <td style="padding: 12px 5px; text-align: center; font-weight: 600;">
+                                <?php echo number_format($s_start, 0, ',', ' '); ?>
+                            </td>
+                            <td style="padding: 12px 5px; text-align: center; font-weight: 700; color: #fff;" id="admin-curr-<?php echo $s_id; ?>">
+                                <?php echo number_format($s_current, 0, ',', ' '); ?>
+                            </td>
+                            <td style="padding: 12px 5px; text-align: center; color: #10B981; font-weight: 700;" id="admin-growth-<?php echo $s_id; ?>">
+                                <?php echo ($s_growth >= 0 ? '+' : '') . number_format($s_growth, 0, ',', ' '); ?>
+                            </td>
+                            <td style="padding: 12px 5px; text-align: center; color: rgba(255,255,255,0.6);" id="admin-time-<?php echo $s_id; ?>">
+                                <?php echo esc_html($s_time_formatted); ?>
+                            </td>
+                            <td style="padding: 12px 5px; text-align: center;" id="admin-status-<?php echo $s_id; ?>">
+                                <?php if ($s_error) : ?>
+                                    <span style="color: #EF4444; font-size: 0.78rem; display: inline-block; background: rgba(239, 68, 68, 0.1); padding: 2px 6px; border-radius: 4px; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="<?php echo esc_attr($s_error); ?>">
+                                        ⚠️ Błąd API
+                                    </span>
+                                <?php else : ?>
+                                    <span style="color: #10B981; font-size: 0.78rem; display: inline-block; background: rgba(16, 185, 129, 0.1); padding: 2px 6px; border-radius: 4px;">
+                                        ✓ OK
+                                    </span>
+                                <?php endif; ?>
+                            </td>
+                            <td style="padding: 12px 5px; text-align: right;">
+                                <button class="btn btn-d btn-sm" onclick="adminForceRefresh(<?php echo $s_id; ?>)" id="btn-admin-refresh-<?php echo $s_id; ?>" style="padding: 6px 12px; font-size: 0.78rem; display: inline-flex; align-items: center; gap: 8px;">
+                                    <span>Odśwież API</span>
+                                    <div class="am-spinner" id="sp-admin-refresh-<?php echo $s_id; ?>" style="width: 10px; height: 10px; border-width: 2px; display: none;"></div>
+                                </button>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Skrypt obsługujący AJAX odświeżania -->
+    <script>
+    function adminForceRefresh(userId) {
+        const btn = document.getElementById('btn-admin-refresh-' + userId);
+        const spinner = document.getElementById('sp-admin-refresh-' + userId);
+        const btnText = btn.querySelector('span');
+        
+        // Blokujemy przycisk i pokazujemy kręciołek
+        btn.disabled = true;
+        spinner.style.display = 'inline-block';
+        btnText.textContent = 'Pobieranie...';
+        
+        const formData = new FormData();
+        formData.append('action', 'am_admin_force_refresh_user');
+        formData.append('user_id', userId);
+        
+        fetch('<?php echo esc_js(admin_url("admin-ajax.php")); ?>', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            btn.disabled = false;
+            spinner.style.display = 'none';
+            btnText.textContent = 'Odśwież API';
+            
+            if (data.success) {
+                // Aktualizujemy komórki w tabeli
+                const followers = data.data.followers.toLocaleString('pl-PL');
+                const growth = (data.data.growth >= 0 ? '+' : '') + data.data.growth.toLocaleString('pl-PL');
+                
+                document.getElementById('admin-curr-' + userId).textContent = followers;
+                document.getElementById('admin-growth-' + userId).textContent = growth;
+                document.getElementById('admin-time-' + userId).textContent = data.data.updated;
+                
+                // Aktualizujemy status na OK
+                document.getElementById('admin-status-' + userId).innerHTML = `
+                    <span style="color: #10B981; font-size: 0.78rem; display: inline-block; background: rgba(16, 185, 129, 0.1); padding: 2px 6px; border-radius: 4px;">
+                        ✓ OK
+                    </span>
+                `;
+                
+                // Mrugnięcie wiersza na zielono
+                const row = document.getElementById('admin-user-row-' + userId);
+                row.style.background = 'rgba(16, 185, 129, 0.1)';
+                setTimeout(() => { row.style.background = 'transparent'; }, 800);
+            } else {
+                alert('Błąd: ' + data.data);
+                // Pokazujemy błąd w statusie
+                document.getElementById('admin-status-' + userId).innerHTML = `
+                    <span style="color: #EF4444; font-size: 0.78rem; display: inline-block; background: rgba(239, 68, 68, 0.1); padding: 2px 6px; border-radius: 4px;" title="${data.data}">
+                        ⚠️ Błąd API
+                    </span>
+                `;
+            }
+        })
+        .catch(err => {
+            btn.disabled = false;
+            spinner.style.display = 'none';
+            btnText.textContent = 'Odśwież API';
+            alert('Wystąpił błąd sieci: ' + err.message);
+        });
+    }
+    </script>
+    <?php endif; ?>
+
   </section>
 </main>
 
