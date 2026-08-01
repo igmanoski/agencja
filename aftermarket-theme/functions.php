@@ -988,16 +988,8 @@ function aftermarket_scrape_instagram_followers($username) {
         return false;
     }
 
-    // Lista powszechnie stosowanych domen i endpointów na RapidAPI dla Instagrama
+    // Lista powszechnie stosowanych domen i endpointów na RapidAPI dla Instagrama (priorytet: instagram-data19)
     $endpoints = array(
-        array(
-            'host' => 'instagram-data120.p.rapidapi.com',
-            'url'  => 'https://instagram-data120.p.rapidapi.com/user-info/?username_or_id_or_url=' . urlencode($username),
-        ),
-        array(
-            'host' => 'instagram-data120.p.rapidapi.com',
-            'url'  => 'https://instagram-data120.p.rapidapi.com/info/?username_or_id_or_url=' . urlencode($username),
-        ),
         array(
             'host' => 'instagram-data19.p.rapidapi.com',
             'url'  => 'https://instagram-data19.p.rapidapi.com/user-info/?username_or_id_or_url=' . urlencode($username),
@@ -1005,6 +997,14 @@ function aftermarket_scrape_instagram_followers($username) {
         array(
             'host' => 'instagram-data19.p.rapidapi.com',
             'url'  => 'https://instagram-data19.p.rapidapi.com/info/?username_or_id_or_url=' . urlencode($username),
+        ),
+        array(
+            'host' => 'instagram-data120.p.rapidapi.com',
+            'url'  => 'https://instagram-data120.p.rapidapi.com/user-info/?username_or_id_or_url=' . urlencode($username),
+        ),
+        array(
+            'host' => 'instagram-data120.p.rapidapi.com',
+            'url'  => 'https://instagram-data120.p.rapidapi.com/info/?username_or_id_or_url=' . urlencode($username),
         ),
         array(
             'host' => 'instagram-scraper-api2.p.rapidapi.com',
