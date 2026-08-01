@@ -1036,7 +1036,7 @@ get_header();
     <input type="hidden" name="payment_method"       id="wc-payment-method" value="<?php echo esc_attr($default_gateway); ?>">
     <input type="hidden" name="woocommerce-process-checkout-nonce" value="<?php echo esc_attr($checkout_nonce); ?>">
     <input type="hidden" name="_wp_http_referer"     value="<?php echo esc_url($_SERVER['REQUEST_URI'] ?? '/zamowienie/'); ?>">
-    <input type="hidden" name="createaccount"        id="wc-createaccount" value="<?php echo $is_logged_in ? '0' : '1'; ?>">
+    <input type="hidden" name="createaccount"        id="wc-createaccount" value="0">
     <input type="hidden" name="terms"                value="on">
     <input type="hidden" name="terms-field"          value="1">
 </form>
