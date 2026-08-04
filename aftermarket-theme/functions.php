@@ -954,6 +954,15 @@ add_action('init', function() {
     }
 });
 
+// Rejestrator błędów kasy WooCommerce — pomoc w wykrywaniu błędów płatności Hotpay
+add_action('woocommerce_after_checkout_validation', function($data, $errors) {
+    if ($errors->get_error_codes()) {
+        $log = "[" . date('Y-m-d H:i:s') . "] CHECKOUT VALIDATION ERRORS: " . implode(' | ', $errors->get_error_messages()) . "\n";
+        $wp_content_dir = dirname(dirname(__DIR__));
+        file_put_contents($wp_content_dir . '/error_log_aftermarket.txt', $log, FILE_APPEND);
+    }
+}, 10, 2);
+
 // B. Wymuszenie tworzenia konta w kasie (wyłączenie zakupów gościnnych)
 add_filter('woocommerce_checkout_registration_enabled', '__return_true');
 add_filter('woocommerce_checkout_registration_required', '__return_true');
