@@ -729,15 +729,25 @@ function aftermarket_on_order_complete($order_id) {
         // Automatyczne pobranie startowej liczby obserwujących przy zakupie
         $start_followers = aftermarket_scrape_instagram_followers($ig_from_order);
         if ($start_followers !== false && $start_followers > 0) {
-            update_user_meta($user_id, 'am_current_followers', $start_followers);
-            update_user_meta($user_id, 'am_followers_start',   $start_followers);
-            update_user_meta($user_id, 'am_ig_last_update',    time());
 
-            // Zapisz punkt początkowy w historii wykresu
-            $history = array(
-                date('Y-m-d') => $start_followers
-            );
-            update_user_meta($user_id, 'am_followers_history', $history);
+            // ZABEZPIECZENIE: konto z >100k followersów to prawdopodobnie celebryta/konto publiczne
+            // które nie należy do klienta — wymagane ręczne zatwierdzenie przez admina
+            if ($start_followers > 100000) {
+                update_user_meta($user_id, 'am_ig_review_required', 1);
+                update_user_meta($user_id, 'am_ig_error', 'Konto ma ' . number_format($start_followers, 0, ',', ' ') . ' obserwujących — wymaga ręcznej weryfikacji przez admina. Użyj panelu admina aby zatwierdzić lub zmienić profil.');
+                // NIE ustawiamy am_followers_start ani am_current_followers — admin musi zatwierdzić
+            } else {
+                update_user_meta($user_id, 'am_current_followers', $start_followers);
+                update_user_meta($user_id, 'am_followers_start',   $start_followers);
+                update_user_meta($user_id, 'am_ig_last_update',    time());
+                delete_user_meta($user_id, 'am_ig_review_required');
+
+                // Zapisz punkt początkowy w historii wykresu
+                $history = array(
+                    date('Y-m-d') => $start_followers
+                );
+                update_user_meta($user_id, 'am_followers_history', $history);
+            }
         }
     }
 
