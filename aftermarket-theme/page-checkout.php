@@ -26,8 +26,8 @@ $product   = $cart_item ? wc_get_product($cart_item['product_id']) : null;
 $product_name = $product ? $product->get_name() : 'Pakiet';
 $total_raw    = (float) $cart->get_total('edit');
 
-$starter_pid = (int) get_option('am_starter_product_id', 0);
-$pro_pid     = (int) get_option('am_pro_product_id', 0);
+$starter_pid = function_exists('aftermarket_get_product_id') ? aftermarket_get_product_id('starter') : (int) get_option('am_starter_product_id', 0);
+$pro_pid     = function_exists('aftermarket_get_product_id') ? aftermarket_get_product_id('pro') : (int) get_option('am_pro_product_id', 0);
 $is_pro      = $cart_item && (int) $cart_item['product_id'] === $pro_pid;
 
 $features = $is_pro ? [

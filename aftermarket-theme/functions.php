@@ -859,10 +859,48 @@ function aftermarket_user_has_access($user_id = null) {
    10. WOOCOMMERCE USTAWIENIA I PRZEKIEROWANIA
 ═══════════════════════════════════════════ */
 
+// Helper: Inteligentne pobieranie ID produktu pakietu z automatyczną detekcją
+function aftermarket_get_product_id($type = 'starter') {
+    $option_name = (in_array($type, array('pro', 'professional'), true)) ? 'am_pro_product_id' : 'am_starter_product_id';
+    $id = (int) get_option($option_name, 0);
+
+    if ($id > 0 && get_post_status($id) === 'publish') {
+        return $id;
+    }
+
+    // Szukamy po slugu w bazie WooCommerce
+    $search_slugs = (in_array($type, array('pro', 'professional'), true)) 
+        ? array('professional', 'pro', 'pakiet-professional', 'pakiet-pro')
+        : array('starter', 'pakiet-starter', 'basic', 'pakiet-basic');
+
+    foreach ($search_slugs as $slug) {
+        $product = get_page_by_path($slug, OBJECT, 'product');
+        if ($product && $product->post_status === 'publish') {
+            update_option($option_name, $product->ID);
+            return $product->ID;
+        }
+    }
+
+    // Szukamy po tytule
+    $title_search = (in_array($type, array('pro', 'professional'), true)) ? 'Professional' : 'Starter';
+    $posts = get_posts(array(
+        'post_type'      => 'product',
+        'post_status'    => 'publish',
+        's'              => $title_search,
+        'posts_per_page' => 1,
+    ));
+    if (!empty($posts)) {
+        update_option($option_name, $posts[0]->ID);
+        return $posts[0]->ID;
+    }
+
+    return $id;
+}
+
 // A. Oczyszczanie koszyka przed dodaniem pakietu (zapobiega sumowaniu)
 add_filter('woocommerce_add_to_cart_validation', function ($passed, $product_id, $quantity) {
-    $starter_pid = (int)get_option('am_starter_product_id', 0);
-    $pro_pid     = (int)get_option('am_pro_product_id',     0);
+    $starter_pid = aftermarket_get_product_id('starter');
+    $pro_pid     = aftermarket_get_product_id('pro');
     $our_pids    = array_filter(array($starter_pid, $pro_pid));
 
     if (in_array($product_id, $our_pids, true)) {

@@ -364,11 +364,11 @@ get_header();
           <svg width="10" height="6" viewBox="0 0 10 6" fill="none" style="stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><path d="M1 1L5 5L9 1"/></svg>
         </button>
         <?php
-        $starter_id = am_field('am_starter_product_id', '');
+        $starter_id = function_exists('aftermarket_get_product_id') ? aftermarket_get_product_id('starter') : am_field('am_starter_product_id', '');
         // Generujemy bezpośredni link do strony kasy (/checkout/) z parametrem dodania do koszyka
         $starter_url = $starter_id 
             ? home_url('/checkout/?add-to-cart=' . intval($starter_id))
-            : 'mailto:kontakt@aftermarket.pl?subject=Rezerwacja pakietu Starter';
+            : home_url('/checkout/');
         ?>
         <a href="<?php echo esc_url($starter_url); ?>" class="btn btn-p btn-block" style="text-align:center;display:block;line-height:1;">Wybierz Starter</a>
       </div>
@@ -394,11 +394,11 @@ get_header();
           <svg width="10" height="6" viewBox="0 0 10 6" fill="none" style="stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><path d="M1 1L5 5L9 1"/></svg>
         </button>
         <?php
-        $prof_id = am_field('am_pro_product_id', '');
+        $prof_id = function_exists('aftermarket_get_product_id') ? aftermarket_get_product_id('pro') : am_field('am_pro_product_id', '');
         // Generujemy bezpośredni link do strony kasy (/checkout/) z parametrem dodania do koszyka
         $prof_url = $prof_id 
             ? home_url('/checkout/?add-to-cart=' . intval($prof_id))
-            : 'mailto:kontakt@aftermarket.pl?subject=Rezerwacja pakietu Professional';
+            : home_url('/checkout/');
         ?>
         <a href="<?php echo esc_url($prof_url); ?>" class="btn btn-p btn-block" style="text-align:center;display:block;line-height:1;">Wybierz Professional</a>
       </div>
