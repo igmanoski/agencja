@@ -1196,6 +1196,7 @@ get_header();
             if (d.result === 'success' && d.redirect) {
                 window.location.href = d.redirect;
             } else {
+                console.error('WooCommerce Checkout Response Error:', d);
                 let msg = 'Nie udało się złożyć zamówienia. Sprawdź dane i spróbuj ponownie.';
                 if (d.messages) {
                     const temp = document.createElement('div');
