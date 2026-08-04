@@ -289,10 +289,16 @@ get_header();
                                     </span>
                                 <?php endif; ?>
                             </td>
-                            <td style="padding: 12px 5px; text-align: right;">
-                                <button class="btn btn-d btn-sm" onclick="adminForceRefresh(<?php echo $s_id; ?>)" id="btn-admin-refresh-<?php echo $s_id; ?>" style="padding: 6px 12px; font-size: 0.78rem; display: inline-flex; align-items: center; gap: 8px;">
+                            <td style="padding: 12px 5px; text-align: right; white-space: nowrap; display: flex; gap: 6px; justify-content: flex-end; flex-wrap: wrap;">
+                                <button class="btn btn-d btn-sm" onclick="adminForceRefresh(<?php echo $s_id; ?>)" id="btn-admin-refresh-<?php echo $s_id; ?>" style="padding: 6px 10px; font-size: 0.75rem; display: inline-flex; align-items: center; gap: 6px;">
                                     <span>Odśwież API</span>
                                     <div class="am-spinner" id="sp-admin-refresh-<?php echo $s_id; ?>" style="width: 10px; height: 10px; border-width: 2px; display: none;"></div>
+                                </button>
+                                <button class="btn btn-d btn-sm" onclick="adminSetIg(<?php echo $s_id; ?>, '<?php echo esc_js($s_ig); ?>')" style="padding: 6px 10px; font-size: 0.75rem; background: rgba(59,130,246,0.15); border-color: rgba(59,130,246,0.4);">
+                                    ✏️ Nick
+                                </button>
+                                <button class="btn btn-d btn-sm" onclick="adminResetIg(<?php echo $s_id; ?>)" style="padding: 6px 10px; font-size: 0.75rem; background: rgba(239,68,68,0.12); border-color: rgba(239,68,68,0.3); color: #EF4444;">
+                                    🗑️ Reset
                                 </button>
                             </td>
                         </tr>
@@ -363,6 +369,41 @@ get_header();
             spinner.style.display = 'none';
             btnText.textContent = 'Odśwież API';
             alert('Wystąpił błąd sieci: ' + err.message);
+        });
+    }
+    function adminSetIg(userId, currentIg) {
+        const newIg = prompt('Wpisz nową nazwę profilu Instagram dla tego klienta:', currentIg);
+        if (!newIg || !newIg.trim()) return;
+        const fd = new FormData();
+        fd.append('action', 'am_admin_set_user_ig');
+        fd.append('uid', userId);
+        fd.append('ig', newIg.trim());
+        fetch('<?php echo esc_js(admin_url("admin-ajax.php")); ?>', { method: 'POST', body: fd })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                alert('✅ Nick zmieniony! ' + data.data.message);
+                location.reload();
+            } else {
+                alert('❌ Błąd: ' + (data.data?.message || 'Nieznany błąd'));
+            }
+        });
+    }
+
+    function adminResetIg(userId) {
+        if (!confirm('Czy na pewno chcesz wyczyścić dane obserwujących dla tego klienta? Zostaną pobrane ponownie przy następnej synchronizacji.')) return;
+        const fd = new FormData();
+        fd.append('action', 'am_admin_reset_user_ig');
+        fd.append('uid', userId);
+        fetch('<?php echo esc_js(admin_url("admin-ajax.php")); ?>', { method: 'POST', body: fd })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                alert('✅ ' + data.data.message);
+                location.reload();
+            } else {
+                alert('❌ Błąd: ' + (data.data?.message || 'Nieznany błąd'));
+            }
         });
     }
     </script>

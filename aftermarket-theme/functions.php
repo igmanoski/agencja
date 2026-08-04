@@ -1038,15 +1038,22 @@ add_filter('woocommerce_billing_fields', function ($fields) {
     return $fields;
 });
 
-// D. Zapis nazwy Instagrama do metadanych użytkownika przy rejestracji
+// D. Zapis nazwy Instagrama do metadanych — TYLKO dla nowo składającego zamówienie użytkownika
 add_action('woocommerce_checkout_update_user_meta', function ($user_id, $posted) {
-    if (!empty($posted['billing_ig_username'])) {
-        $ig = sanitize_text_field($posted['billing_ig_username']);
-        if (strpos($ig, '@') !== 0) {
-            $ig = '@' . $ig;
-        }
-        update_user_meta($user_id, 'am_ig_username', $ig);
+    if (empty($user_id) || empty($posted['billing_ig_username'])) return;
+
+    // Zabezpieczenie: nie nadpisuj jeśli klient już ma przypisany i zweryfikowany IG
+    $existing_ig = get_user_meta($user_id, 'am_ig_username', true);
+    $has_access  = get_user_meta($user_id, 'am_access_granted', true);
+
+    // Jeśli klient ma aktywny dostęp i przypisany nick — nie zmieniaj go automatycznie
+    if ($has_access && !empty($existing_ig)) return;
+
+    $ig = sanitize_text_field($posted['billing_ig_username']);
+    if (strpos($ig, '@') !== 0) {
+        $ig = '@' . $ig;
     }
+    update_user_meta($user_id, 'am_ig_username', $ig);
 }, 10, 2);
 
 // E. Przekierowanie prosto do kasy po dodaniu do koszyka
@@ -1384,6 +1391,52 @@ function am_ajax_admin_force_refresh_user() {
 }
 add_action('wp_ajax_am_admin_force_refresh_user', 'am_ajax_admin_force_refresh_user');
 
+// Endpoint admina: reset danych IG użytkownika (czyści błędne dane obserwujących)
+function am_ajax_admin_reset_user_ig() {
+    if (!current_user_can('manage_options')) {
+        wp_send_json_error(array('message' => 'Brak uprawnień.'));
+    }
 
+    $uid = (int)($_POST['uid'] ?? 0);
+    if (!$uid) {
+        wp_send_json_error(array('message' => 'Brak ID użytkownika.'));
+    }
 
+    // Czyścimy błędne dane obserwujących dla tego użytkownika
+    delete_user_meta($uid, 'am_current_followers');
+    delete_user_meta($uid, 'am_followers_start');
+    delete_user_meta($uid, 'am_followers_history');
+    delete_user_meta($uid, 'am_ig_last_update');
+    delete_user_meta($uid, 'am_ig_error');
 
+    wp_send_json_success(array('message' => 'Dane obserwujących zostały wyczyszczone.'));
+}
+add_action('wp_ajax_am_admin_reset_user_ig', 'am_ajax_admin_reset_user_ig');
+
+// Endpoint admina: ustaw nick IG użytkownika ręcznie
+function am_ajax_admin_set_user_ig() {
+    if (!current_user_can('manage_options')) {
+        wp_send_json_error(array('message' => 'Brak uprawnień.'));
+    }
+
+    $uid = (int)($_POST['uid'] ?? 0);
+    $ig  = sanitize_text_field($_POST['ig'] ?? '');
+
+    if (!$uid || empty($ig)) {
+        wp_send_json_error(array('message' => 'Brak danych.'));
+    }
+
+    if (strpos($ig, '@') !== 0) {
+        $ig = '@' . $ig;
+    }
+
+    update_user_meta($uid, 'am_ig_username', $ig);
+    // Resetuj też followersy żeby się przeliczyły od nowa dla właściwego konta
+    delete_user_meta($uid, 'am_current_followers');
+    delete_user_meta($uid, 'am_followers_start');
+    delete_user_meta($uid, 'am_followers_history');
+    delete_user_meta($uid, 'am_ig_last_update');
+
+    wp_send_json_success(array('message' => 'Nick Instagram zaktualizowany. Dane obserwujących zostaną pobrane przy następnej synchronizacji.'));
+}
+add_action('wp_ajax_am_admin_set_user_ig', 'am_ajax_admin_set_user_ig');
