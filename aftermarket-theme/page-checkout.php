@@ -1172,6 +1172,11 @@ get_header();
         }
         hideErr('err-pay');
 
+        const selectedPay = document.querySelector('input[name="am-choose-payment"]:checked');
+        if (selectedPay) {
+            set('wc-payment-method', selectedPay.value);
+        }
+
         set('wc-first',   v('d-first'));
         set('wc-last',    v('d-last'));
         set('wc-email',   v('d-email'));
