@@ -871,6 +871,52 @@ add_filter('woocommerce_add_to_cart_validation', function ($passed, $product_id,
     return $passed;
 }, 10, 3);
 
+// A1. Dynamiczna gwarancja cen pakietów w koszyku (2000 zł Starter / 3000 zł Pro)
+add_action('woocommerce_before_calculate_totals', function($cart) {
+    if (is_admin() && !defined('DOING_AJAX')) return;
+    if (did_action('woocommerce_before_calculate_totals') >= 2) return;
+
+    $starter_pid = (int)get_option('am_starter_product_id', 0);
+    $pro_pid     = (int)get_option('am_pro_product_id',     0);
+
+    foreach ($cart->get_cart() as $cart_item_key => $cart_item) {
+        $pid = (int)$cart_item['product_id'];
+        if ($starter_pid > 0 && $pid === $starter_pid) {
+            $cart_item['data']->set_price(2000);
+        } elseif ($pro_pid > 0 && $pid === $pro_pid) {
+            $cart_item['data']->set_price(3000);
+        }
+    }
+}, 10, 1);
+
+// A2. Automatyczne upewnienie się, że produkty Starter i Pro są opublikowane i dostępne w magazynie
+add_action('init', function() {
+    if (!class_exists('WooCommerce')) return;
+
+    $starter_id = (int)get_option('am_starter_product_id', 0);
+    $pro_id     = (int)get_option('am_pro_product_id', 0);
+
+    if ($starter_id > 0) {
+        $starter_post = get_post($starter_id);
+        if ($starter_post && $starter_post->post_status !== 'publish') {
+            wp_update_post(array('ID' => $starter_id, 'post_status' => 'publish'));
+        }
+        update_post_meta($starter_id, '_stock_status', 'instock');
+        update_post_meta($starter_id, '_price', '2000');
+        update_post_meta($starter_id, '_regular_price', '2000');
+    }
+
+    if ($pro_id > 0) {
+        $pro_post = get_post($pro_id);
+        if ($pro_post && $pro_post->post_status !== 'publish') {
+            wp_update_post(array('ID' => $pro_id, 'post_status' => 'publish'));
+        }
+        update_post_meta($pro_id, '_stock_status', 'instock');
+        update_post_meta($pro_id, '_price', '3000');
+        update_post_meta($pro_id, '_regular_price', '3000');
+    }
+});
+
 // B. Wymuszenie tworzenia konta w kasie (wyłączenie zakupów gościnnych)
 add_filter('woocommerce_checkout_registration_enabled', '__return_true');
 add_filter('woocommerce_checkout_registration_required', '__return_true');
