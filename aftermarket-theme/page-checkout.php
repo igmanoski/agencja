@@ -1055,15 +1055,9 @@ get_header();
     const NONCE_R    = '<?php echo esc_js($register_nonce); ?>';
     const LOGGED_IN  = <?php echo $is_logged_in ? 'true' : 'false'; ?>;
 
-    /* ── auto refresh checkout nonce ── */
-    fetch(AJAX + '?action=am_get_checkout_nonce')
-        .then(r => r.json())
-        .then(res => {
-            if (res && res.success && res.data && res.data.nonce) {
-                const el = document.getElementsByName('woocommerce-process-checkout-nonce')[0];
-                if (el) el.value = res.data.nonce;
-            }
-        }).catch(function() {});
+    let step    = LOGGED_IN ? 2 : 1;
+    let invOpen = false;
+    let checks  = { c1: false, c2: false };
 
     /* ── stepper ── */
     function stepperUpdate(s) {
@@ -1231,7 +1225,7 @@ get_header();
     function set(id, val) { const el = document.getElementById(id); if (el) el.value = val; }
     function checkMark() { return '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>'; }
     function fd2(obj) { const f = new FormData(); Object.entries(obj).forEach(([k, val]) => f.append(k, val)); return f; }
-    function post(fd) { return fetch(AJAX, { method: 'POST', credentials: 'same-origin', body: fd }).then(r => r.json()); }
+    function post(fd) { return fetch(AJAX, { method: 'POST', credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' }, body: fd }).then(r => r.json()); }
     function showErr(id, msg) { const el = document.getElementById(id); if (el) { el.textContent = msg; el.classList.add('show'); } }
     function hideErr(id) { const el = document.getElementById(id); if (el) el.classList.remove('show'); }
     function load(btnId, spId, on) {
