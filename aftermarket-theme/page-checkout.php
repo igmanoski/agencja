@@ -5,6 +5,12 @@
  * Wieloetapowa, premium strona zamówienia pakietu Aftermarket.
  * Zastępuje domyślny formularz WooCommerce.
  */
+if (!defined('DONOTCACHEPAGE')) {
+    define('DONOTCACHEPAGE', true);
+}
+if (!defined('DONOTCACHEOBJECT')) {
+    define('DONOTCACHEOBJECT', true);
+}
 $is_order_received = is_wc_endpoint_url('order-received');
 global $wp;
 $order_id = isset($wp->query_vars['order-received']) ? intval($wp->query_vars['order-received']) : 0;
@@ -1049,9 +1055,15 @@ get_header();
     const NONCE_R    = '<?php echo esc_js($register_nonce); ?>';
     const LOGGED_IN  = <?php echo $is_logged_in ? 'true' : 'false'; ?>;
 
-    let step       = LOGGED_IN ? 2 : 1;
-    let invOpen    = false;
-    let checks     = { c1: false, c2: false };
+    /* ── auto refresh checkout nonce ── */
+    fetch(AJAX + '?action=am_get_checkout_nonce')
+        .then(r => r.json())
+        .then(res => {
+            if (res && res.success && res.data && res.data.nonce) {
+                const el = document.getElementsByName('woocommerce-process-checkout-nonce')[0];
+                if (el) el.value = res.data.nonce;
+            }
+        }).catch(function() {});
 
     /* ── stepper ── */
     function stepperUpdate(s) {

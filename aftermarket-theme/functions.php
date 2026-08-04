@@ -996,6 +996,13 @@ add_action('woocommerce_checkout_payment_exception', function($order, $e) {
     }
 }, 10, 2);
 
+// AJAX — pobieranie świeżego nonce'a kasy (zapobiega błędom buforowania strony Litespeed / Cloudflare)
+add_action('wp_ajax_am_get_checkout_nonce',        'am_ajax_get_checkout_nonce');
+add_action('wp_ajax_nopriv_am_get_checkout_nonce', 'am_ajax_get_checkout_nonce');
+function am_ajax_get_checkout_nonce() {
+    wp_send_json_success(array('nonce' => wp_create_nonce('woocommerce-process_checkout')));
+}
+
 // B. Wymuszenie tworzenia konta w kasie (wyłączenie zakupów gościnnych)
 add_filter('woocommerce_checkout_registration_enabled', '__return_true');
 add_filter('woocommerce_checkout_registration_required', '__return_true');
