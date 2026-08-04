@@ -909,26 +909,50 @@ add_filter('woocommerce_add_to_cart_validation', function ($passed, $product_id,
     return $passed;
 }, 10, 3);
 
-// A1. Gwarancja prawidłowej ceny netto pakietów w koszyku (zgodna z VAT i ustawieniami WooCommerce)
+// A1. Gwarancja prawidłowej ceny netto pakietów w koszyku (2000 zł Starter / 3000 zł Pro)
 add_action('woocommerce_before_calculate_totals', function($cart) {
     if (is_admin() && !defined('DOING_AJAX')) return;
-    if (did_action('woocommerce_before_calculate_totals') >= 2) return;
 
-    $starter_pid = (int)get_option('am_starter_product_id', 0);
-    $pro_pid     = (int)get_option('am_pro_product_id',     0);
+    $starter_pid = aftermarket_get_product_id('starter');
+    $pro_pid     = aftermarket_get_product_id('pro');
 
     foreach ($cart->get_cart() as $cart_item_key => $cart_item) {
         $pid = (int)$cart_item['product_id'];
         $product = $cart_item['data'];
-        $current_price = (float)$product->get_price('edit');
+        $price = (float)$product->get_price('edit');
 
-        if ($starter_pid > 0 && $pid === $starter_pid && $current_price <= 0) {
-            $product->set_price(2000);
-        } elseif ($pro_pid > 0 && $pid === $pro_pid && $current_price <= 0) {
-            $product->set_price(3000);
+        if ($starter_pid > 0 && $pid === $starter_pid) {
+            if ($price <= 0) {
+                $product->set_price(2000);
+                $product->set_regular_price(2000);
+            }
+        } elseif ($pro_pid > 0 && $pid === $pro_pid) {
+            if ($price <= 0) {
+                $product->set_price(3000);
+                $product->set_regular_price(3000);
+            }
         }
     }
 }, 10, 1);
+
+// A1.5 Gwarancja, że pozycje zamówienia przekazywane do HotPay nie mają zerowej kwoty (Brak parametru: KWOTA)
+add_action('woocommerce_checkout_create_order_line_item', function($item, $cart_item_key, $values, $order) {
+    $starter_pid = aftermarket_get_product_id('starter');
+    $pro_pid     = aftermarket_get_product_id('pro');
+
+    $product_id = $item->get_product_id();
+    if ($starter_pid > 0 && $product_id === $starter_pid) {
+        if ((float)$item->get_total() <= 0) {
+            $item->set_subtotal(2000);
+            $item->set_total(2000);
+        }
+    } elseif ($pro_pid > 0 && $product_id === $pro_pid) {
+        if ((float)$item->get_total() <= 0) {
+            $item->set_subtotal(3000);
+            $item->set_total(3000);
+        }
+    }
+}, 10, 4);
 
 // A2. Automatyczne upewnienie się, że produkty Starter i Pro są opublikowane i dostępne w magazynie
 add_action('init', function() {
