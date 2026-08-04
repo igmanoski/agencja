@@ -11,6 +11,14 @@ if (!defined('DONOTCACHEPAGE')) {
 if (!defined('DONOTCACHEOBJECT')) {
     define('DONOTCACHEOBJECT', true);
 }
+// Wymuszenie braku cache dla serwera LH.pl / LiteSpeed / Cloudflare
+if (!headers_sent()) {
+    header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+    header('Pragma: no-cache');
+    header('Expires: Thu, 01 Jan 1970 00:00:00 GMT');
+    header('X-LiteSpeed-Cache-Control: no-cache');
+    header('X-Accel-Expires: 0');
+}
 $is_order_received = is_wc_endpoint_url('order-received');
 global $wp;
 $order_id = isset($wp->query_vars['order-received']) ? intval($wp->query_vars['order-received']) : 0;
@@ -1109,6 +1117,29 @@ get_header();
         document.getElementById('tab-' + tab).classList.add('active');
     };
 
+    /* ── nonce refresh po zmianie sesji (login / register) ── */
+    function refreshNonce(callback) {
+        fetch('/?wc-ajax=get_refreshed_fragments', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            body: new URLSearchParams({ wc_ajax_nonce: '' })
+        }).then(function() {
+            // Pobierz świeży nonce PHP przez ukryty endpoint
+            return fetch('/wp-admin/admin-ajax.php?action=am_get_checkout_nonce', {
+                credentials: 'same-origin',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+        }).then(function(r) { return r.json(); })
+        .then(function(res) {
+            if (res && res.success && res.data && res.data.nonce) {
+                const el = document.getElementsByName('woocommerce-process-checkout-nonce')[0];
+                if (el) el.value = res.data.nonce;
+            }
+            callback();
+        }).catch(function() { callback(); });
+    }
+
     /* ── login ── */
     window.doLogin = function () {
         const email = v('l-email'), pass = v('l-pass');
@@ -1119,7 +1150,7 @@ get_header();
             load('btn-login', 'sp-login', false);
             if (d.success) {
                 document.getElementById('d-email').value = email;
-                goStep(2);
+                refreshNonce(function() { goStep(2); });
             } else {
                 showErr('err-login', d.data?.message || 'Niepoprawny email lub hasło.');
             }
@@ -1138,7 +1169,7 @@ get_header();
             load('btn-register', 'sp-register', false);
             if (d.success) {
                 document.getElementById('d-email').value = email;
-                goStep(2);
+                refreshNonce(function() { goStep(2); });
             } else {
                 showErr('err-register', d.data?.message || 'Nie udało się utworzyć konta.');
             }
