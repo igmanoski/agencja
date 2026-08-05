@@ -424,33 +424,7 @@ function aftermarket_settings_page() {
                         </table>
                     </div>
 
-                    <!-- GITHUB ACTIONS SYNC -->
-                    <div style="background:#fff; padding:24px; border-radius:8px; border:1px solid #ccd0d4; margin-bottom:20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-                        <h2 style="margin-top:0; border-bottom:1px solid #eee; padding-bottom:12px; color:#23282d; display:flex; align-items:center; gap:8px;">
-                            <span class="dashicons dashicons-html" style="color:#24292e;"></span> DARMOWA Synchronizacja (GitHub Actions)
-                        </h2>
-                        <table class="form-table">
-                            <tr>
-                                <th>Adres URL do pobierania kont</th>
-                                <td>
-                                    <code><?php echo esc_url(admin_url('admin-ajax.php?action=am_get_ig_handles&token=' . get_option('am_cron_token'))); ?></code>
-                                </td>
-                            </tr>
-                            <tr>
-                                <th>Adres URL do wysyłania wyników</th>
-                                <td>
-                                    <code><?php echo esc_url(admin_url('admin-ajax.php')); ?></code> (akcja: <code>am_update_ig_followers</code>)
-                                </td>
-                            </tr>
-                            <tr>
-                                <th>Token bezpieczeństwa</th>
-                                <td>
-                                    <input type="text" readonly value="<?php echo esc_attr(get_option('am_cron_token')); ?>" class="regular-text" style="background:#f0f0f1; font-family:monospace;">
-                                    <p class="description">Użyj tego tokenu w skrypcie GitHub Actions jako parametru uwierzytelniającego.</p>
-                                </td>
-                            </tr>
-                        </table>
-                    </div>
+
 
                     <!-- EDYCJA KROKÓW (ZASAD) -->
                     <div style="background:#fff; padding:24px; border-radius:8px; border:1px solid #ccd0d4; margin-bottom:20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
@@ -1297,108 +1271,7 @@ add_action('wp', function() {
     }
 });
 
-/* ═══════════════════════════════════════════
-   11. SYNC ENDPOINTS DLA GITHUB ACTIONS
-═══════════════════════════════════════════ */
-add_action('admin_init', function() {
-    if (!get_option('am_cron_token')) {
-        update_option('am_cron_token', bin2hex(random_bytes(16)));
-    }
-});
 
-// GET: Pobierz listę loginów IG do zaktualizowania
-function am_api_get_ig_handles() {
-    $token = sanitize_text_field($_GET['token'] ?? '');
-    $correct = get_option('am_cron_token');
-    if (empty($correct) || $token !== $correct) {
-        wp_send_json_error('Access denied', 403);
-    }
-
-    $sponsors = get_users(array(
-        'meta_key'   => 'am_package',
-        'meta_value' => '',
-        'meta_compare' => '!=',
-        'number'     => 1000,
-    ));
-
-    $handles = array();
-    foreach ($sponsors as $u) {
-        $user_id = $u->ID;
-        $username = get_user_meta($user_id, 'am_ig_username', true);
-        if (!empty($username)) {
-            $handles[] = ltrim(trim($username), '@');
-        }
-    }
-    
-    $api_key = get_option('am_rapidapi_key', '');
-
-    wp_send_json_success(array(
-        'handles' => array_values(array_unique($handles)),
-        'api_key' => $api_key
-    ));
-}
-add_action('wp_ajax_am_get_ig_handles',        'am_api_get_ig_handles');
-add_action('wp_ajax_nopriv_am_get_ig_handles', 'am_api_get_ig_handles');
-
-// POST: Zapisz pobrane z zewnątrz dane
-function am_api_update_ig_followers() {
-    $token = sanitize_text_field($_POST['token'] ?? '');
-    $correct = get_option('am_cron_token');
-    if (empty($correct) || $token !== $correct) {
-        wp_send_json_error('Access denied', 403);
-    }
-
-    $data = json_decode(stripslashes($_POST['data'] ?? '[]'), true);
-    if (!is_array($data)) {
-        wp_send_json_error('Invalid payload format', 400);
-    }
-
-    $updated = 0;
-    foreach ($data as $username => $count) {
-        $count = (int)$count;
-        if ($count <= 0) continue;
-
-        $clean_username = ltrim(trim($username), '@');
-
-        // Znajdź użytkownika po IG username
-        $users = get_users(array(
-            'meta_key'   => 'am_ig_username',
-            'meta_value' => $clean_username,
-            'number'     => 1,
-        ));
-        if (empty($users)) {
-            $users = get_users(array(
-                'meta_key'   => 'am_ig_username',
-                'meta_value' => '@' . $clean_username,
-                'number'     => 1,
-            ));
-        }
-
-        if (!empty($users)) {
-            $uid = $users[0]->ID;
-            update_user_meta($uid, 'am_current_followers', $count);
-            update_user_meta($uid, 'am_ig_last_update', time());
-            delete_user_meta($uid, 'am_ig_error');
-
-            $start = (int)get_user_meta($uid, 'am_followers_start', true);
-            if ($start === 0) {
-                update_user_meta($uid, 'am_followers_start', $count);
-            }
-
-            // Zapis w historii
-            $hist = get_user_meta($uid, 'am_followers_history', true);
-            if (!is_array($hist)) $hist = array();
-            $hist[date('Y-m-d')] = $count;
-            if (count($hist) > 30) $hist = array_slice($hist, -30, null, true);
-            update_user_meta($uid, 'am_followers_history', $hist);
-
-            $updated++;
-        }
-    }
-    wp_send_json_success(array('updated' => $updated));
-}
-add_action('wp_ajax_am_update_ig_followers',        'am_api_update_ig_followers');
-add_action('wp_ajax_nopriv_am_update_ig_followers', 'am_api_update_ig_followers');
 
 // H. AJAX: Wymuszenie odświeżenia statystyk wybranego sponsora (tylko dla administratora)
 function am_ajax_admin_force_refresh_user() {
