@@ -313,7 +313,27 @@ add_action('admin_init', function () {
     register_setting('aftermarket_options', 'fomo_total_slots',    array('type' => 'integer', 'sanitize_callback' => 'absint'));
 });
 
+// Automatyczne przeliczanie wolnych miejsc (Suma - Zarezerwowane = Wolne) przy zapisie opcji
+add_filter('pre_update_option_fomo_reserved_slots', function($new_reserved) {
+    $total = (int)($_POST['fomo_total_slots'] ?? get_option('fomo_total_slots', 80));
+    $free  = max(0, $total - (int)$new_reserved);
+    update_option('fomo_free_slots', $free);
+    return $new_reserved;
+});
+
+add_filter('pre_update_option_fomo_total_slots', function($new_total) {
+    $reserved = (int)($_POST['fomo_reserved_slots'] ?? get_option('fomo_reserved_slots', 72));
+    $free     = max(0, (int)$new_total - $reserved);
+    update_option('fomo_free_slots', $free);
+    return $new_total;
+});
+
 function am_field($key, $fallback = '') {
+    if ($key === 'fomo_free_slots') {
+        $tot = (int)get_option('fomo_total_slots', 80);
+        $res = (int)get_option('fomo_reserved_slots', 72);
+        return (string)max(0, $tot - $res);
+    }
     $val = get_option($key);
     if ($val !== false && $val !== '') {
         return $val;
@@ -468,20 +488,48 @@ function aftermarket_settings_page() {
                         <h2 style="margin-top:0; border-bottom:1px solid #eee; padding-bottom:12px; color:#23282d; display:flex; align-items:center; gap:8px;">
                             <span class="dashicons dashicons-groups" style="color:#10B981;"></span> Wolne Miejsca dla Sponsorów (Pasek FOMO)
                         </h2>
+                        <?php 
+                        $res_val   = (int)get_option('fomo_reserved_slots', 72);
+                        $tot_val   = (int)get_option('fomo_total_slots', 80);
+                        $free_calc = max(0, $tot_val - $res_val);
+                        ?>
                         <table class="form-table">
                             <tr>
-                                <th>Wolne miejsca</th>
-                                <td><input type="number" name="fomo_free_slots" value="<?php echo esc_attr(get_option('fomo_free_slots', '8')); ?>" class="small-text"></td>
-                            </tr>
-                            <tr>
-                                <th>Zarezerwowane miejsca</th>
-                                <td><input type="number" name="fomo_reserved_slots" value="<?php echo esc_attr(get_option('fomo_reserved_slots', '72')); ?>" class="small-text"></td>
+                                <th>Zarezerwowane miejsca (zajęte)</th>
+                                <td>
+                                    <input type="number" id="fomo_reserved_input" name="fomo_reserved_slots" value="<?php echo esc_attr($res_val); ?>" class="small-text">
+                                    <p class="description">Liczba aktualnie zajętych/sprzedanych miejsc.</p>
+                                </td>
                             </tr>
                             <tr>
                                 <th>Suma wszystkich miejsc</th>
-                                <td><input type="number" name="fomo_total_slots" value="<?php echo esc_attr(get_option('fomo_total_slots', '80')); ?>" class="small-text"></td>
+                                <td>
+                                    <input type="number" id="fomo_total_input" name="fomo_total_slots" value="<?php echo esc_attr($tot_val); ?>" class="small-text">
+                                    <p class="description">Łączna pula wszystkich dostępnych miejsc w konkursie.</p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Wolne miejsca (wyliczane automatycznie)</th>
+                                <td>
+                                    <input type="number" id="fomo_free_input" name="fomo_free_slots" value="<?php echo esc_attr($free_calc); ?>" class="small-text" readonly style="background:#f0f0f1; font-weight:bold; color:#10B981;">
+                                    <p class="description"><strong>Różnica: Suma wszystkich miejsc minus Zarezerwowane miejsca.</strong> Wyliczane automatycznie.</p>
+                                </td>
                             </tr>
                         </table>
+                        <script>
+                        (function() {
+                            function recalcFomo() {
+                                var res = parseInt(document.getElementById('fomo_reserved_input')?.value || 0, 10);
+                                var tot = parseInt(document.getElementById('fomo_total_input')?.value || 0, 10);
+                                var freeEl = document.getElementById('fomo_free_input');
+                                if (freeEl) {
+                                    freeEl.value = Math.max(0, tot - res);
+                                }
+                            }
+                            document.getElementById('fomo_reserved_input')?.addEventListener('input', recalcFomo);
+                            document.getElementById('fomo_total_input')?.addEventListener('input', recalcFomo);
+                        })();
+                        </script>
                     </div>
                 </div>
 
