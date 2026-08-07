@@ -1063,6 +1063,22 @@ add_filter('woocommerce_billing_fields', function ($fields) {
         'class'       => array('form-row-wide'),
         'clear'       => true,
     );
+    $fields['billing_company'] = array(
+        'type'        => 'text',
+        'label'       => 'Nazwa firmy',
+        'placeholder' => 'Twoja Firma sp. z o.o.',
+        'required'    => false,
+        'class'       => array('form-row-wide'),
+        'clear'       => true,
+    );
+    $fields['billing_nip'] = array(
+        'type'        => 'text',
+        'label'       => 'NIP',
+        'placeholder' => '0000000000',
+        'required'    => false,
+        'class'       => array('form-row-wide'),
+        'clear'       => true,
+    );
     // Usuwamy wymaganie i samo pole telefonu z WooCommerce
     if (isset($fields['billing_phone'])) {
         unset($fields['billing_phone']);
@@ -1070,9 +1086,70 @@ add_filter('woocommerce_billing_fields', function ($fields) {
     return $fields;
 });
 
-// D. Zapis nazwy Instagrama do metadanych — TYLKO dla nowo składającego zamówienie użytkownika
+// Dodanie pola NIP i Nazwa firmy do edycji danych rozliczeniowych w panelu WP-Admin -> Zamówienia
+add_filter('woocommerce_admin_billing_fields', function ($fields) {
+    $fields['company'] = array(
+        'label' => 'Nazwa firmy',
+        'show'  => true,
+    );
+    $fields['nip'] = array(
+        'label' => 'NIP firmy',
+        'show'  => true,
+    );
+    return $fields;
+});
+
+// D. Zapis NIP i Nazwy firmy do zamówienia (meta_data) przy tworzeniu zamówienia
+add_action('woocommerce_checkout_create_order', function ($order, $data) {
+    if (isset($_POST['billing_company'])) {
+        $company = sanitize_text_field(wp_unslash($_POST['billing_company']));
+        if (!empty($company)) {
+            $order->set_billing_company($company);
+            $order->update_meta_data('_billing_company', $company);
+        }
+    }
+    if (isset($_POST['billing_nip'])) {
+        $nip = sanitize_text_field(wp_unslash($_POST['billing_nip']));
+        if (!empty($nip)) {
+            $order->update_meta_data('_billing_nip', $nip);
+            $order->update_meta_data('billing_nip', $nip);
+            $order->update_meta_data('_vat_number', $nip);
+        }
+    }
+}, 10, 2);
+
+// Wyświetlenie danych do faktury (Firma + NIP) w panelu edycji zamówienia w WP Admin -> Zamówienia
+add_action('woocommerce_admin_order_data_after_billing_address', function ($order) {
+    $company = $order->get_billing_company() ?: $order->get_meta('_billing_company');
+    $nip     = $order->get_meta('_billing_nip') ?: $order->get_meta('billing_nip') ?: $order->get_meta('_vat_number');
+
+    echo '<div class="address" style="margin-top:15px; padding-top:10px; border-top:1px solid #eee;">';
+    echo '<p style="margin-bottom:4px;"><strong style="color:#2271b1;">📄 Dane do Faktury VAT:</strong></p>';
+    if (!empty($company)) {
+        echo '<p style="margin:2px 0;"><strong>Firma:</strong> ' . esc_html($company) . '</p>';
+    } else {
+        echo '<p style="margin:2px 0; color:#646970;"><em>Brak firmy (zakup prywatny)</em></p>';
+    }
+    if (!empty($nip)) {
+        echo '<p style="margin:2px 0;"><strong>NIP:</strong> <strong style="color:#d63638; font-size:1.08em;">' . esc_html($nip) . '</strong></p>';
+    } else {
+        echo '<p style="margin:2px 0; color:#646970;"><em>Brak numeru NIP</em></p>';
+    }
+    echo '</div>';
+});
+
+// D1. Zapis nazwy Instagrama, NIP i firmy do metadanych użytkownika przy rejestracji/zamówieniu
 add_action('woocommerce_checkout_update_user_meta', function ($user_id, $posted) {
-    if (empty($user_id) || empty($posted['billing_ig_username'])) return;
+    if (empty($user_id)) return;
+
+    if (!empty($posted['billing_company'])) {
+        update_user_meta($user_id, 'billing_company', sanitize_text_field($posted['billing_company']));
+    }
+    if (!empty($posted['billing_nip'])) {
+        update_user_meta($user_id, 'billing_nip', sanitize_text_field($posted['billing_nip']));
+    }
+
+    if (empty($posted['billing_ig_username'])) return;
 
     // Zabezpieczenie: nie nadpisuj jeśli klient już ma przypisany i zweryfikowany IG
     $existing_ig = get_user_meta($user_id, 'am_ig_username', true);

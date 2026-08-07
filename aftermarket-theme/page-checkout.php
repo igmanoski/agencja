@@ -1100,6 +1100,13 @@ get_header();
                 showErr('err-data', 'Wypełnij wszystkie wymagane pola: profil Instagram, imię, nazwisko i email.');
                 return;
             }
+            if (invOpen) {
+                const comp = v('d-company'), nip = v('d-nip');
+                if (!comp || !nip) {
+                    showErr('err-data', 'Podaj nazwę firmy oraz NIP do faktury.');
+                    return;
+                }
+            }
             hideErr('err-data');
         }
         document.getElementById('panel-' + step).classList.remove('visible');
@@ -1222,8 +1229,8 @@ get_header();
         set('wc-city',    v('d-city')  || 'Warszawa');
         set('wc-post',    v('d-post')  || '00-001');
         set('wc-ig',      v('d-ig'));
-        set('wc-company', v('d-company') || '');
-        set('wc-nip',     v('d-nip')     || '');
+        set('wc-company', invOpen ? v('d-company') : v('d-company'));
+        set('wc-nip',     invOpen ? v('d-nip') : v('d-nip'));
 
         load('btn-pay', 'sp-pay', true);
 
